@@ -1,0 +1,234 @@
+// Prisma schema for BS-manager
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  HR
+  MANAGER
+  EMPLOYEE
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  name         String
+  role         Role     @default(EMPLOYEE)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  employee         Employee?      @relation("UserEmployee")
+  approvedEntries  TimeEntry[]    @relation("ApprovedBy")
+  reviewedLeaves   LeaveRequest[] @relation("ReviewedBy")
+  ownedLeads       Lead[]         @relation("LeadOwner")
+  leadNotes        LeadNote[]     @relation("LeadNoteAuthor")
+}
+
+enum EmployeeStatus {
+  ACTIVE
+  INACTIVE
+}
+
+model Employee {
+  id              String         @id @default(cuid())
+  userId          String?        @unique
+  user            User?          @relation("UserEmployee", fields: [userId], references: [id])
+  fullName        String
+  email           String         @unique
+  phone           String?
+  jobTitle        String?
+  department      String?
+  hireDate        DateTime
+  terminationDate DateTime?
+  salaryCents     Int?
+  status          EmployeeStatus @default(ACTIVE)
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  timeEntries   TimeEntry[]
+  leaveRequests LeaveRequest[]
+}
+
+enum TimeEntryStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model TimeEntry {
+  id             String          @id @default(cuid())
+  employeeId     String
+  employee       Employee        @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  clockIn        DateTime
+  clockOut       DateTime?
+  note           String?
+  status         TimeEntryStatus @default(PENDING)
+  approvedById   String?
+  approvedBy     User?           @relation("ApprovedBy", fields: [approvedById], references: [id])
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  @@index([employeeId])
+}
+
+enum LeaveType {
+  VACATION
+  SICK
+  OTHER
+}
+
+enum LeaveStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model LeaveRequest {
+  id           String      @id @default(cuid())
+  employeeId   String
+  employee     Employee    @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  type         LeaveType   @default(VACATION)
+  startDate    DateTime
+  endDate      DateTime
+  reason       String?
+  status       LeaveStatus @default(PENDING)
+  reviewedById String?
+  reviewedBy   User?       @relation("ReviewedBy", fields: [reviewedById], references: [id])
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  @@index([employeeId])
+}
+
+enum LeadStatus {
+  NEW
+  CONTACTED
+  PROPOSAL
+  WON
+  LOST
+}
+
+model Lead {
+  id          String     @id @default(cuid())
+  name        String
+  company     String?
+  email       String?
+  phone       String?
+  source      String?
+  status      LeadStatus @default(NEW)
+  valueCents  Int?
+  ownerId     String?
+  owner       User?      @relation("LeadOwner", fields: [ownerId], references: [id])
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  notes LeadNote[]
+}
+
+model LeadNote {
+  id        String   @id @default(cuid())
+  leadId    String
+  lead      Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  authorId  String?
+  author    User?    @relation("LeadNoteAuthor", fields: [authorId], references: [id])
+  content   String
+  createdAt DateTime @default(now())
+
+  @@index([leadId])
+}
+
+enum BillingInterval {
+  MONTHLY
+  YEARLY
+}
+
+model Plan {
+  id          String          @id @default(cuid())
+  name        String
+  description String?
+  priceCents  Int
+  interval    BillingInterval @default(MONTHLY)
+  active      Boolean         @default(true)
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  subscriptions Subscription[]
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  PAST_DUE
+  CANCELED
+}
+
+model Subscription {
+  id                String              @id @default(cuid())
+  customerName      String
+  customerEmail     String
+  planId            String
+  plan              Plan                @relation(fields: [planId], references: [id])
+  status            SubscriptionStatus  @default(ACTIVE)
+  startDate         DateTime            @default(now())
+  currentPeriodEnd  DateTime
+  canceledAt        DateTime?
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+
+  @@index([planId])
+}
+
+enum InvoiceStatus {
+  DRAFT
+  SENT
+  PAID
+  OVERDUE
+  CANCELED
+}
+
+model Invoice {
+  id           String        @id @default(cuid())
+  number       String        @unique
+  customerName String
+  customerEmail String?
+  issueDate    DateTime      @default(now())
+  dueDate      DateTime
+  status       InvoiceStatus @default(DRAFT)
+  paidAt       DateTime?
+  notes        String?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  items InvoiceItem[]
+}
+
+model InvoiceItem {
+  id            String  @id @default(cuid())
+  invoiceId     String
+  invoice       Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  description   String
+  quantity      Int     @default(1)
+  unitPriceCents Int
+
+  @@index([invoiceId])
+}
+
+model Expense {
+  id          String   @id @default(cuid())
+  description String
+  category    String
+  amountCents Int
+  date        DateTime @default(now())
+  paidBy      String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
