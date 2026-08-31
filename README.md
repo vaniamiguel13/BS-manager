@@ -5,7 +5,7 @@ Plataforma de gestão unificada para pequenas empresas: registo de horas, RH, le
 ## Stack
 
 - [Next.js](https://nextjs.org) (App Router) + TypeScript + Tailwind CSS
-- [Prisma](https://www.prisma.io) ORM — SQLite em desenvolvimento, Postgres recomendado em produção
+- [Prisma](https://www.prisma.io) ORM sobre Postgres (recomendado: [Neon](https://neon.tech), tem plano gratuito)
 - [Auth.js / NextAuth v5](https://authjs.dev) com login por email/palavra-passe e papéis (ADMIN, HR, MANAGER, EMPLOYEE)
 
 ## Módulos
@@ -30,10 +30,13 @@ O acesso a cada módulo é limitado por papel (ver `src/components/nav-items.ts`
 
 ## Desenvolvimento local
 
+A aplicação usa Postgres (não SQLite), incluindo em desenvolvimento. A forma mais simples de teres uma base de dados sem instalar nada é criar um projeto grátis na [Neon](https://neon.tech) (ver secção de deploy abaixo para o passo a passo de criar o projeto) e usar essa connection string também localmente.
+
 ```bash
 npm install
-cp .env.example .env   # ajusta AUTH_SECRET com `npx auth secret`
-npm run db:migrate      # cria a base de dados SQLite local
+cp .env.example .env   # preenche DATABASE_URL e DIRECT_URL (Neon) e gera o AUTH_SECRET
+npx auth secret         # gera e insere um AUTH_SECRET seguro no .env
+npm run db:migrate      # aplica as migrações à base de dados
 npm run db:seed         # popula dados de demonstração
 npm run dev
 ```
@@ -49,23 +52,40 @@ Abre [http://localhost:3000](http://localhost:3000). Contas de demonstração cr
 
 **Muda estas palavras-passe (ou apaga estas contas) antes de usar em produção.**
 
-## Deploy barato (~€20/mês ou menos)
+## Deploy grátis: Vercel (Hobby) + Neon
 
-Sugestão de infraestrutura para até ~20 utilizadores:
+> **Nota**: o plano gratuito (Hobby) da Vercel é, nos termos de serviço, destinado a uso pessoal/não-comercial. Para uma empresa pequena a testar a plataforma isto é geralmente aceitável, mas convém passar para o plano Pro (~€20/mês) assim que o uso passar a ser regular pela equipa. Também não há garantias de disponibilidade nem backups automáticos num plano gratuito — para dados de RH e horas, isto é um risco a ter em conta.
 
-1. **Base de dados Postgres**: [Neon](https://neon.tech) ou [Supabase](https://supabase.com) — plano gratuito costuma chegar para esta escala; se precisares de mais, ronda os €10-19/mês.
-2. **Hosting da aplicação**: [Vercel](https://vercel.com) — plano gratuito (Hobby) para testar, ou €20/mês (Pro) para uso comercial contínuo.
-3. Define as variáveis de ambiente no serviço de hosting: `DATABASE_URL` (a connection string do Postgres) e `AUTH_SECRET` (gera com `npx auth secret`).
-4. No primeiro deploy, corre `npx prisma migrate deploy` apontado à base de dados de produção (localmente ou via um passo de build) e depois `npx prisma db seed` **apenas se quiseres dados de demonstração** — normalmente não em produção real.
+### 1. Criar a base de dados na Neon
 
-Para mudar de SQLite para Postgres, altera o `datasource` em `prisma/schema.prisma`:
+1. Cria conta em [neon.tech](https://neon.tech) e cria um novo projeto (ex: `bsmanager`).
+2. No dashboard do projeto, vai a **Connect** → copia as duas connection strings:
+   - **Pooled connection** → vai para `DATABASE_URL`
+   - **Direct connection** → vai para `DIRECT_URL`
+3. Guarda as duas — vais precisar delas tanto localmente como na Vercel.
 
-```prisma
-datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
-}
+### 2. Aplicar as migrações
+
+Localmente, com o `.env` preenchido com as connection strings da Neon:
+
+```bash
+npm run db:migrate    # cria as tabelas na base de dados Neon
+npm run db:seed       # opcional: só se quiseres dados de demonstração
 ```
+
+### 3. Criar o projeto na Vercel
+
+1. Cria conta em [vercel.com](https://vercel.com) e faz **Import Project** a partir deste repositório GitHub.
+2. Framework preset: Next.js (deteta automaticamente).
+3. Em **Environment Variables**, adiciona:
+   - `DATABASE_URL` — a pooled connection string da Neon
+   - `DIRECT_URL` — a direct connection string da Neon
+   - `AUTH_SECRET` — gera uma nova com `npx auth secret` (não reutilizes a de desenvolvimento)
+4. Clica em **Deploy**. O comando de build (`npm run build`) já corre `prisma generate` automaticamente — não precisas de configurar nada extra.
+
+### 4. Migrações em deploys futuros
+
+Sempre que alterares o `prisma/schema.prisma`, corre `npx prisma migrate dev` localmente para criar a migração, faz commit da pasta `prisma/migrations/` e só depois faz deploy — a Vercel não corre `migrate deploy` automaticamente. Para aplicar migrações pendentes à base de dados de produção sem seres tu a correr localmente, corre `npx prisma migrate deploy` a partir de uma máquina com acesso ao `DATABASE_URL`/`DIRECT_URL` de produção antes ou depois do deploy.
 
 ## Scripts úteis
 
