@@ -1,6 +1,16 @@
 # BS-manager
 Plataforma de Gestão: uma alternativa simples ao Odoo para equipas pequenas, acessível pelo browser (computador ou telemóvel) a partir de qualquer lado.
 
+## Estado do desenvolvimento
+
+A base de desenvolvimento é a versão Flask de 2026-10-28, no ramo `develop`.
+O âmbito inicial inclui picagens, registos de trabalho, férias/ausências,
+calendário e gestão de utilizadores. A versão anterior com CRM, subscrições e
+contabilidade está fora deste primeiro lançamento.
+
+A aplicação ainda é um protótipo. A revisão, os critérios de aceitação e os
+próximos passos estão em [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md).
+
 ## Funcionalidades
 
 | Módulo | O que faz |
@@ -23,6 +33,14 @@ ADMIN_EMAIL=admin@exemplo.pt ADMIN_PASSWORD=mudar123 flask --app wsgi run --debu
 ```
 
 Abra http://localhost:5000 e entre com o email e a palavra-passe acima. O primeiro administrador só é criado se a base de dados estiver vazia. Também o pode criar mais tarde com `flask --app wsgi create-admin`.
+
+Fora de testes ou do modo debug, `SECRET_KEY` é obrigatória e deve ter pelo
+menos 32 caracteres não vazios, gerados aleatoriamente. A aplicação recusa
+arrancar sem uma chave válida. Para gerar uma chave, use
+`python3 -c "import secrets; print(secrets.token_hex(32))"` e guarde-a fora do Git.
+No modo debug, uma chave temporária é gerada se não existir uma configurada;
+as sessões terminam quando a aplicação reinicia. `serve.py` guarda a chave
+gerada no `.env` para a manter entre reinícios.
 
 Testes: `pytest`
 

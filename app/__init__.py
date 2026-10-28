@@ -1,4 +1,5 @@
 import os
+import secrets
 
 import click
 from flask import Flask
@@ -31,7 +32,7 @@ def create_app(config_overrides=None):
             database_url = "postgresql+psycopg://" + database_url[len(prefix):]
 
     app.config.update(
-        SECRET_KEY=os.environ.get("SECRET_KEY") or "dev-change-me",
+        SECRET_KEY=os.environ.get("SECRET_KEY"),
         SQLALCHEMY_DATABASE_URI=database_url,
         SESSION_COOKIE_HTTPONLY=True,
         SESSION_COOKIE_SAMESITE="Lax",
@@ -46,8 +47,15 @@ def create_app(config_overrides=None):
     if config_overrides:
         app.config.update(config_overrides)
 
-    if app.config["SECRET_KEY"] == "dev-change-me" and not app.debug and not app.testing:
-        app.logger.warning("SECRET_KEY não definida! Defina-a antes de usar em produção.")
+    secret_key = app.config["SECRET_KEY"]
+    if not secret_key and (app.debug or app.testing):
+        # Development and test sessions use an ephemeral key, never a public default.
+        secret_key = app.config["SECRET_KEY"] = secrets.token_hex(32)
+    if not isinstance(secret_key, (str, bytes)) or len(secret_key.strip()) < 32:
+        raise RuntimeError(
+            "Set SECRET_KEY to a randomly generated value of at least 32 characters "
+            "before starting the application."
+        )
 
     db.init_app(app)
     csrf.init_app(app)
