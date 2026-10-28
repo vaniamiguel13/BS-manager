@@ -5,6 +5,7 @@ from flask import Flask
 from flask_login import LoginManager
 from flask_sqlalchemy import SQLAlchemy
 from flask_wtf.csrf import CSRFProtect
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import DeclarativeBase
 
 
@@ -90,7 +91,12 @@ def _bootstrap_admin(app):
     )
     admin.set_password(password)
     db.session.add(admin)
-    db.session.commit()
+    try:
+        db.session.commit()
+    except IntegrityError:
+        # Outro processo (worker) criou-o ao mesmo tempo.
+        db.session.rollback()
+        return
     app.logger.info("Administrador inicial criado: %s", admin.email)
 
 

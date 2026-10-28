@@ -13,4 +13,4 @@ RUN useradd --create-home appuser && mkdir -p /app/instance && chown appuser /ap
 USER appuser
 
 EXPOSE 8000
-CMD ["gunicorn", "--bind", "0.0.0.0:8000", "--workers", "3", "--access-logfile", "-", "wsgi:app"]
+CMD ["gunicorn", "--bind", "0.0.0.0:8000", "--workers", "3", "--preload", "--access-logfile", "-", "wsgi:app"]
