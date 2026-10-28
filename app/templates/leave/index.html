@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+{% from "_macros.html" import csrf, status_badge %}
+{% block title %}Férias e ausências · {{ company_name }}{% endblock %}
+{% block content %}
+<h1>Férias e ausências</h1>
+
+<div class="grid grid-3 stats">
+  <div class="card stat"><span class="muted">Direito em {{ year }}</span><strong>{{ current_user.vacation_days }} dias</strong></div>
+  <div class="card stat"><span class="muted">Gozados / aprovados</span><strong>{{ used_approved }} dias</strong></div>
+  <div class="card stat"><span class="muted">Disponíveis (inclui pendentes)</span><strong>{{ current_user.vacation_days - used_total }} dias</strong></div>
+</div>
+
+{% if current_user.is_admin %}
+<section class="card">
+  <h2>Pedidos por aprovar ({{ pending|length }})</h2>
+  {% if pending %}
+  <table>
+    <thead><tr><th>Colaborador</th><th>Tipo</th><th>Período</th><th>Dias úteis</th><th>Motivo</th><th>Decisão</th></tr></thead>
+    <tbody>
+    {% for r in pending %}
+      <tr>
+        <td>{{ r.user.name }}</td>
+        <td>{{ r.kind_label }}</td>
+        <td>{{ r.start_date|d }} – {{ r.end_date|d }}</td>
+        <td>{{ r.working_days() }}{% if r.kind == 'ferias' %} <span class="muted">(saldo {{ r.user.vacation_balance(r.start_date.year) }})</span>{% endif %}</td>
+        <td>{{ r.reason }}</td>
+        <td>
+          <form method="post" action="{{ url_for('leave.review', leave_id=r.id) }}" class="review-form">
+            {{ csrf() }}
+            <input name="review_note" placeholder="Nota (opcional)" maxlength="500">
+            <button name="decision" value="aprovar" class="btn btn-success btn-sm">Aprovar</button>
+            <button name="decision" value="rejeitar" class="btn btn-danger btn-sm">Rejeitar</button>
+          </form>
+        </td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+    <p class="muted">Não há pedidos pendentes.</p>
+  {% endif %}
+</section>
+{% endif %}
+
+<div class="grid grid-2-1">
+  <section class="card">
+    <h2>Os meus pedidos</h2>
+    {% if requests %}
+    <table>
+      <thead><tr><th>Tipo</th><th>Período</th><th>Dias úteis</th><th>Estado</th><th></th></tr></thead>
+      <tbody>
+      {% for r in requests %}
+        <tr>
+          <td>{{ r.kind_label }}</td>
+          <td>{{ r.start_date|d }} – {{ r.end_date|d }}</td>
+          <td>{{ r.working_days() }}</td>
+          <td>{{ status_badge(r.status) }}{% if r.review_note %}<div class="desc">{{ r.review_note }}</div>{% endif %}</td>
+          <td>
+            {% if r.status in ('pendente', 'aprovado') and (r.start_date > today or r.status == 'pendente') %}
+            <form method="post" action="{{ url_for('leave.cancel', leave_id=r.id) }}" onsubmit="return confirm('Cancelar este pedido?')">
+              {{ csrf() }}<button class="link danger">Cancelar</button>
+            </form>
+            {% endif %}
+          </td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+      <p class="muted">Ainda não fez nenhum pedido.</p>
+    {% endif %}
+  </section>
+
+  <form method="post" action="{{ url_for('leave.create') }}" class="card">
+    {{ csrf() }}
+    <h2>Novo pedido</h2>
+    <label>Tipo
+      <select name="kind">{% for k, label in kinds.items() %}<option value="{{ k }}">{{ label }}</option>{% endfor %}</select>
+    </label>
+    <label>De <input type="date" name="start_date" required></label>
+    <label>Até <input type="date" name="end_date"></label>
+    <label>Motivo / observações <textarea name="reason" rows="3" maxlength="500"></textarea></label>
+    <p class="muted small">Fins de semana e feriados nacionais não contam como dias de férias.</p>
+    <button class="btn btn-primary">Submeter pedido</button>
+  </form>
+</div>
+{% endblock %}

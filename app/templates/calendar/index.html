@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+{% from "_macros.html" import csrf %}
+{% block title %}Calendário · {{ company_name }}{% endblock %}
+{% block head %}
+<script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/index.global.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@fullcalendar/core@6.1.15/locales/pt.global.min.js"></script>
+{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1>Calendário da equipa</h1>
+  <div class="actions">
+    <button class="btn btn-primary" onclick="document.getElementById('event-dialog').showModal()">+ Novo evento</button>
+  </div>
+</div>
+<p class="legend muted">
+  <span class="dot" style="background:#dc2626"></span>Feriado
+  <span class="dot" style="background:#0f766e"></span>Evento da equipa
+  <span class="dot striped"></span>Ausência (cor de cada colaborador; tracejado = pendente)
+</p>
+<div class="card"><div id="calendar"></div></div>
+
+<dialog id="event-dialog">
+  <form method="post" action="{{ url_for('calendar.create_event') }}">
+    {{ csrf() }}
+    <h2>Novo evento</h2>
+    <label>Título <input name="title" required maxlength="200"></label>
+    <label class="check"><input type="checkbox" name="all_day" value="1" id="all-day"> Dia inteiro</label>
+    <div class="timed grid grid-2">
+      <label>Início <input type="datetime-local" name="start" id="ev-start"></label>
+      <label>Fim <input type="datetime-local" name="end" id="ev-end"></label>
+    </div>
+    <div class="allday grid grid-2" hidden>
+      <label>De <input type="date" name="start_date" id="ev-start-date"></label>
+      <label>Até <input type="date" name="end_date" id="ev-end-date"></label>
+    </div>
+    <label>Descrição <textarea name="description" rows="3"></textarea></label>
+    <div class="actions">
+      <button class="btn btn-primary">Criar</button>
+      <button type="button" class="btn btn-light" onclick="this.closest('dialog').close()">Cancelar</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="detail-dialog">
+  <h2 id="detail-title"></h2>
+  <p id="detail-when" class="muted"></p>
+  <p id="detail-desc"></p>
+  <div class="actions">
+    <form method="post" id="detail-delete" hidden onsubmit="return confirm('Apagar este evento?')">
+      {{ csrf() }}<button class="btn btn-danger">Apagar</button>
+    </form>
+    <button class="btn btn-light" onclick="this.closest('dialog').close()">Fechar</button>
+  </div>
+</dialog>
+{% endblock %}
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  const allDay = document.getElementById('all-day');
+  const toggle = () => {
+    document.querySelector('.timed').hidden = allDay.checked;
+    document.querySelector('.allday').hidden = !allDay.checked;
+  };
+  allDay.addEventListener('change', toggle);
+
+  const deleteUrl = "{{ url_for('calendar.delete_event', event_id=0) }}".replace(/0\/apagar$/, '');
+  const calendar = new FullCalendar.Calendar(document.getElementById('calendar'), {
+    locale: 'pt',
+    firstDay: 1,
+    height: 'auto',
+    initialView: window.innerWidth < 700 ? 'listMonth' : 'dayGridMonth',
+    headerToolbar: { left: 'prev,next today', center: 'title', right: 'dayGridMonth,timeGridWeek,listMonth' },
+    events: "{{ url_for('calendar.events') }}",
+    selectable: true,
+    select: function (info) {
+      // Pré-preenche o formulário com o intervalo selecionado.
+      allDay.checked = info.allDay; toggle();
+      if (info.allDay) {
+        const end = new Date(info.end); end.setDate(end.getDate() - 1);
+        document.getElementById('ev-start-date').value = info.startStr;
+        document.getElementById('ev-end-date').value = end.toISOString().slice(0, 10);
+      } else {
+        document.getElementById('ev-start').value = info.startStr.slice(0, 16);
+        document.getElementById('ev-end').value = info.endStr.slice(0, 16);
+      }
+      document.getElementById('event-dialog').showModal();
+    },
+    eventClick: function (info) {
+      const p = info.event.extendedProps;
+      if (info.event.display === 'background') return;
+      document.getElementById('detail-title').textContent = info.event.title;
+      document.getElementById('detail-when').textContent =
+        info.event.start.toLocaleString('pt-PT', info.event.allDay ? { dateStyle: 'full' } : { dateStyle: 'full', timeStyle: 'short' })
+        + (p.author ? ' · criado por ' + p.author : '');
+      document.getElementById('detail-desc').textContent = p.description || '';
+      const del = document.getElementById('detail-delete');
+      del.hidden = !(p.kind === 'evento' && p.canEdit);
+      if (!del.hidden) del.action = deleteUrl + info.event.id + '/apagar';
+      document.getElementById('detail-dialog').showModal();
+    },
+  });
+  calendar.render();
+});
+</script>
+{% endblock %}

@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% from "_macros.html" import csrf, month_nav %}
+{% block title %}Tarefas · {{ company_name }}{% endblock %}
+{% block content %}
+{% set filters = {'user': request.args.get('user', ''), 'projeto': request.args.get('projeto', '')} %}
+<div class="page-header">
+  <h1>Tarefas</h1>
+  <div class="actions">
+    <a class="btn btn-primary" href="{{ url_for('tasks.edit') }}">+ Registar tarefa</a>
+    <a class="btn btn-light" href="{{ url_for('tasks.export', mes=first.strftime('%Y-%m'), **filters) }}">Exportar CSV</a>
+  </div>
+</div>
+
+<form method="get" class="filters">
+  <input type="hidden" name="mes" value="{{ first.strftime('%Y-%m') }}">
+  {% if current_user.is_admin %}
+  <select name="user" onchange="this.form.submit()">
+    <option value="">Todos os colaboradores</option>
+    {% for u in users %}<option value="{{ u.id }}" {{ 'selected' if filters.user == u.id|string }}>{{ u.name }}</option>{% endfor %}
+  </select>
+  {% endif %}
+  <select name="projeto" onchange="this.form.submit()">
+    <option value="">Todos os projetos</option>
+    {% for p in projects %}<option {{ 'selected' if filters.projeto == p }}>{{ p }}</option>{% endfor %}
+  </select>
+</form>
+
+{{ month_nav('tasks.index', first, prev_month, next_month, **filters) }}
+
+<div class="card">
+  <p>Total: <strong>{{ total|hours }}</strong> em {{ entries|length }} registo(s)</p>
+  {% if entries %}
+  <table>
+    <thead><tr><th>Data</th>{% if current_user.is_admin %}<th>Colaborador</th>{% endif %}<th>Projeto</th><th>Tarefa</th><th>Horas</th><th></th></tr></thead>
+    <tbody>
+    {% for e in entries %}
+      <tr>
+        <td>{{ e.date|d }}</td>
+        {% if current_user.is_admin %}<td>{{ e.user.name }}</td>{% endif %}
+        <td>{% if e.project %}<span class="tag">{{ e.project }}</span>{% endif %}</td>
+        <td><strong>{{ e.title }}</strong>{% if e.description %}<div class="desc">{{ e.description }}</div>{% endif %}</td>
+        <td>{{ e.hours|hours }}</td>
+        <td class="row-actions">
+          {% if e.user_id == current_user.id or current_user.is_admin %}
+          <a href="{{ url_for('tasks.edit', task_id=e.id) }}">Editar</a>
+          <form method="post" action="{{ url_for('tasks.delete', task_id=e.id) }}" class="inline" onsubmit="return confirm('Apagar esta tarefa?')">
+            {{ csrf() }}<button class="link danger">Apagar</button>
+          </form>
+          {% endif %}
+        </td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+    <p class="muted">Sem tarefas registadas neste mês.</p>
+  {% endif %}
+</div>
+{% endblock %}

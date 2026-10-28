@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}Utilizadores · {{ company_name }}{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1>Utilizadores</h1>
+  <div class="actions"><a class="btn btn-primary" href="{{ url_for('admin.edit_user') }}">+ Novo utilizador</a></div>
+</div>
+<div class="card">
+  <table>
+    <thead><tr><th>Nome</th><th>Email</th><th>Perfil</th><th>Férias {{ year }}</th><th>Estado</th><th></th></tr></thead>
+    <tbody>
+    {% for u in users %}
+      <tr class="{{ 'inactive' if not u.active }}">
+        <td><span class="dot" style="background: {{ u.color }}"></span>{{ u.name }}</td>
+        <td>{{ u.email }}</td>
+        <td>{{ 'Administrador' if u.is_admin else 'Colaborador' }}</td>
+        <td>{{ u.vacation_balance(year) }} / {{ u.vacation_days }}</td>
+        <td>{{ 'Ativo' if u.active else 'Inativo' }}</td>
+        <td class="row-actions">
+          <a href="{{ url_for('admin.edit_user', user_id=u.id) }}">Editar</a>
+          <a href="{{ url_for('attendance.index', user=u.id) }}">Picagens</a>
+          <a href="{{ url_for('tasks.index', user=u.id) }}">Tarefas</a>
+        </td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

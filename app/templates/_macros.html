@@ -1,0 +1,13 @@
+{% macro csrf() %}<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">{% endmacro %}
+
+{% macro month_nav(endpoint, first, prev_month, next_month) %}
+<div class="month-nav">
+  <a class="btn btn-light" href="{{ url_for(endpoint, mes=prev_month, **kwargs) }}">‹</a>
+  <strong>{{ first|month_label }}</strong>
+  <a class="btn btn-light" href="{{ url_for(endpoint, mes=next_month, **kwargs) }}">›</a>
+</div>
+{% endmacro %}
+
+{% macro status_badge(status) %}
+<span class="badge badge-{{ status }}">{{ status|capitalize }}</span>
+{% endmacro %}

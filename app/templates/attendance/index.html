@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% from "_macros.html" import csrf, month_nav %}
+{% block title %}Picagens · {{ company_name }}{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1>Picagens{% if user.id != current_user.id %} · {{ user.name }}{% endif %}</h1>
+  <div class="actions">
+    {% if current_user.is_admin %}
+      <form method="get" class="inline">
+        <input type="hidden" name="mes" value="{{ first.strftime('%Y-%m') }}">
+        <select name="user" onchange="this.form.submit()">
+          {% for u in users %}<option value="{{ u.id }}" {{ 'selected' if u.id == user.id }}>{{ u.name }}</option>{% endfor %}
+        </select>
+      </form>
+      <a class="btn btn-light" href="{{ url_for('attendance.edit', user=user.id) }}">+ Picagem manual</a>
+      <a class="btn btn-light" href="{{ url_for('attendance.export', mes=first.strftime('%Y-%m'), todos=1) }}">CSV (todos)</a>
+    {% endif %}
+    <a class="btn btn-light" href="{{ url_for('attendance.export', mes=first.strftime('%Y-%m'), user=user.id) }}">Exportar CSV</a>
+  </div>
+</div>
+
+{{ month_nav('attendance.index', first, prev_month, next_month, user=user.id) }}
+
+<div class="card">
+  <p>Total do mês: <strong>{{ total|hours }}</strong> em {{ days|length }} dia(s)</p>
+  {% if days %}
+  <table>
+    <thead><tr><th>Dia</th><th>Entrada</th><th>Saída</th><th>Duração</th><th>Nota</th>{% if current_user.is_admin %}<th></th>{% endif %}</tr></thead>
+    <tbody>
+    {% for day, sessions in days.items() %}
+      {% for s in sessions %}
+      <tr>
+        <td>{% if loop.first %}<strong>{{ day|d }}</strong>{% endif %}</td>
+        <td>{{ s.start|t }}</td>
+        <td>{% if s.end %}{{ s.end|t }}{% if s.end.date() != s.start.date() %} <span class="muted">({{ s.end|d }})</span>{% endif %}{% else %}<span class="badge badge-pendente">em curso</span>{% endif %}</td>
+        <td>{{ s.duration|hours }}</td>
+        <td>{{ s.note }}{% if s.edited_by %} <span class="muted" title="Editado por {{ s.edited_by.name }}">✎</span>{% endif %}</td>
+        {% if current_user.is_admin %}
+        <td class="row-actions">
+          <a href="{{ url_for('attendance.edit', session_id=s.id) }}">Editar</a>
+          <form method="post" action="{{ url_for('attendance.delete', session_id=s.id) }}" class="inline" onsubmit="return confirm('Apagar esta picagem?')">
+            {{ csrf() }}<button class="link danger">Apagar</button>
+          </form>
+        </td>
+        {% endif %}
+      </tr>
+      {% endfor %}
+      {% if sessions|length > 1 %}
+      <tr class="subtotal"><td></td><td colspan="2">Total do dia</td><td>{{ sessions|map(attribute='hours')|sum|hours }}</td><td colspan="2"></td></tr>
+      {% endif %}
+    {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+    <p class="muted">Sem picagens neste mês.</p>
+  {% endif %}
+</div>
+{% endblock %}

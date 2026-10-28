@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% from "_macros.html" import csrf %}
+{% block title %}Utilizador · {{ company_name }}{% endblock %}
+{% block content %}
+<h1>{{ user.name if user else 'Novo utilizador' }}</h1>
+<form method="post" class="card form-narrow">
+  {{ csrf() }}
+  <label>Nome <input name="name" required value="{{ user.name if user else request.form.get('name', '') }}"></label>
+  <label>Email <input type="email" name="email" required value="{{ user.email if user else request.form.get('email', '') }}"></label>
+  <label>{{ 'Nova palavra-passe (deixe vazio para manter)' if user else 'Palavra-passe inicial' }}
+    <input type="password" name="password" minlength="8" {{ '' if user else 'required' }} autocomplete="new-password"></label>
+  <div class="grid grid-2">
+    <label>Dias de férias por ano <input type="number" name="vacation_days" min="0" max="60" value="{{ user.vacation_days if user else default_vacation_days }}"></label>
+    <label>Cor no calendário <input type="color" name="color" value="{{ user.color if user else '#3b82f6' }}"></label>
+  </div>
+  <label class="check"><input type="checkbox" name="is_admin" value="1" {{ 'checked' if user and user.is_admin }}> Administrador (aprova férias, gere utilizadores e picagens)</label>
+  <label class="check"><input type="checkbox" name="active" value="1" {{ 'checked' if not user or user.active }}> Conta ativa</label>
+  <div class="actions">
+    <button class="btn btn-primary">Guardar</button>
+    <a class="btn btn-light" href="{{ url_for('admin.users') }}">Cancelar</a>
+  </div>
+</form>
+{% endblock %}

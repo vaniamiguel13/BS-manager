@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% from "_macros.html" import csrf %}
+{% block title %}Picagem · {{ company_name }}{% endblock %}
+{% block content %}
+<h1>{{ 'Editar' if session else 'Nova' }} picagem</h1>
+<form method="post" class="card form-narrow">
+  {{ csrf() }}
+  {% set selected = session.user_id if session else preselected %}
+  <label>Colaborador
+    <select name="user_id" required>
+      {% for u in users %}<option value="{{ u.id }}" {{ 'selected' if u.id == selected }}>{{ u.name }}</option>{% endfor %}
+    </select>
+  </label>
+  <label>Entrada <input type="datetime-local" name="start" required value="{{ session.start.strftime('%Y-%m-%dT%H:%M') if session }}"></label>
+  <label>Saída <input type="datetime-local" name="end" value="{{ session.end.strftime('%Y-%m-%dT%H:%M') if session and session.end }}">
+    <small class="muted">Deixe vazio se ainda estiver a trabalhar.</small></label>
+  <label>Nota <input name="note" maxlength="255" value="{{ session.note if session }}"></label>
+  <div class="actions">
+    <button class="btn btn-primary">Guardar</button>
+    <a class="btn btn-light" href="{{ url_for('attendance.index', user=selected) }}">Cancelar</a>
+  </div>
+</form>
+{% endblock %}

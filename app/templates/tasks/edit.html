@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% from "_macros.html" import csrf %}
+{% block title %}Tarefa · {{ company_name }}{% endblock %}
+{% block content %}
+<h1>{{ 'Editar' if task else 'Registar' }} tarefa</h1>
+<form method="post" class="card form-narrow">
+  {{ csrf() }}
+  <div class="grid grid-2">
+    <label>Data <input type="date" name="date" required value="{{ (task.date if task else default_date).isoformat() }}"></label>
+    <label>Horas <input type="number" name="hours" min="0" max="24" step="0.25" value="{{ task.hours if task else '' }}" placeholder="ex.: 1.5"></label>
+  </div>
+  <label>Projeto / cliente
+    <input name="project" list="projects" maxlength="120" value="{{ task.project if task }}">
+    <datalist id="projects">{% for p in projects %}<option value="{{ p }}">{% endfor %}</datalist>
+  </label>
+  <label>Tarefa <input name="title" required maxlength="200" value="{{ task.title if task }}" placeholder="Resumo do que foi feito"></label>
+  <label>Descrição <textarea name="description" rows="5" placeholder="Detalhes, notas, próximos passos…">{{ task.description if task }}</textarea></label>
+  <div class="actions">
+    <button class="btn btn-primary">Guardar</button>
+    <a class="btn btn-light" href="{{ url_for('tasks.index') }}">Cancelar</a>
+  </div>
+</form>
+{% endblock %}

@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% from "_macros.html" import csrf %}
+{% block title %}Entrar · {{ company_name }}{% endblock %}
+{% block content %}
+<div class="login-card card">
+  <h1>{{ company_name }}</h1>
+  <p class="muted">Inicie sessão para continuar</p>
+  <form method="post">
+    {{ csrf() }}
+    <label>Email <input type="email" name="email" required autofocus autocomplete="username"></label>
+    <label>Palavra-passe <input type="password" name="password" required autocomplete="current-password"></label>
+    <label class="check"><input type="checkbox" name="remember" value="1"> Manter sessão iniciada</label>
+    <button class="btn btn-primary btn-block">Entrar</button>
+  </form>
+</div>
+{% endblock %}
