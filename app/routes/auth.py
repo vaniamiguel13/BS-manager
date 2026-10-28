@@ -1,3 +1,5 @@
+import time
+from collections import defaultdict
 from urllib.parse import urlparse
 
 from flask import Blueprint, flash, redirect, render_template, request, url_for
@@ -8,6 +10,18 @@ from ..models import User
 
 bp = Blueprint("auth", __name__)
 
+# Proteção contra tentativas repetidas: após MAX_FAILURES falhas para o mesmo email,
+# o login fica bloqueado durante LOCKOUT_SECONDS. Guardado em memória (um só processo).
+MAX_FAILURES = 10
+LOCKOUT_SECONDS = 15 * 60
+_failures = defaultdict(list)
+
+
+def _is_locked(email):
+    cutoff = time.monotonic() - LOCKOUT_SECONDS
+    _failures[email] = [t for t in _failures[email] if t > cutoff]
+    return len(_failures[email]) >= MAX_FAILURES
+
 
 @bp.route("/login", methods=["GET", "POST"])
 def login():
@@ -16,14 +30,19 @@ def login():
     if request.method == "POST":
         email = request.form.get("email", "").strip().lower()
         password = request.form.get("password", "")
+        if _is_locked(email):
+            flash("Demasiadas tentativas falhadas. Tente novamente daqui a 15 minutos.", "error")
+            return render_template("auth/login.html"), 429
         user = User.query.filter_by(email=email).first()
         if user and user.active and user.check_password(password):
+            _failures.pop(email, None)
             login_user(user, remember=bool(request.form.get("remember")))
             next_url = request.args.get("next", "")
             # Só aceitar redirecionamentos internos.
             if not next_url.startswith("/") or urlparse(next_url).netloc:
                 next_url = url_for("dashboard.index")
             return redirect(next_url)
+        _failures[email].append(time.monotonic())
         flash("Email ou palavra-passe inválidos.", "error")
     return render_template("auth/login.html")
 

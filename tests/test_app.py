@@ -215,3 +215,17 @@ def test_all_pages_render(admin):
     for url in ["/", "/picagens/", "/tarefas/", "/tarefas/nova", "/ferias/", "/calendario/",
                 "/admin/utilizadores", "/admin/utilizadores/novo", "/perfil", "/picagens/nova"]:
         assert admin.get(url).status_code == 200, url
+
+
+def test_login_lockout_after_repeated_failures(app):
+    from app.routes import auth
+
+    auth._failures.clear()
+    client = app.test_client()
+    for _ in range(auth.MAX_FAILURES):
+        login(client, password="errada")
+    resp = login(client)  # palavra-passe certa, mas bloqueado
+    assert resp.status_code == 429
+    assert client.get("/").status_code == 302
+    auth._failures.clear()
+    assert login(client).status_code == 302

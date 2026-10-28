@@ -48,10 +48,33 @@ Cuidados:
 * Peça ao responsável de rede um IP fixo para o PC (reserva DHCP no router), para o endereço não mudar.
 * Faça cópias de segurança regulares de `instance/bs-manager.db` (por exemplo, com uma tarefa `cron` que a copia para outro disco ou para a cloud).
 
-### Aceder de fora do escritório
+### Aceder de fora do escritório: Cloudflare Tunnel (recomendado)
 
-* **Tailscale (recomendado):** instale o [Tailscale](https://tailscale.com) no PC do escritório (`curl -fsSL https://tailscale.com/install.sh | sh && sudo tailscale up`) e no computador ou telemóvel de cada colega. Todos acedem a `http://<nome-do-pc>:8000` como se estivessem no escritório, sem abrir portas no router. A aplicação não fica exposta à internet. É gratuito para equipas pequenas.
-* **Cloudflare Tunnel:** dá um endereço público com HTTPS (ex.: `https://gestao.suaempresa.pt`) sem abrir portas, mas precisa de um domínio gerido na Cloudflare. Nesse caso, defina `SESSION_COOKIE_SECURE=1` no `.env`.
+O Cloudflare Tunnel dá um endereço com HTTPS, por exemplo `https://gestao.suaempresa.pt`, sem abrir portas no router. É gratuito, sem limite de utilizadores, e os colegas só precisam do browser.
+
+**Usar o domínio que já têm:** pode usar um subdomínio (ex.: `gestao.`) do domínio do site. O site não é afetado. A condição é que o **DNS do domínio seja gerido pela Cloudflare**:
+
+* Se o domínio já está na Cloudflare, pode avançar.
+* Se não está, adicione-o em [dash.cloudflare.com](https://dash.cloudflare.com) (plano Free). A Cloudflare importa os registos DNS atuais. Antes de mudar os *nameservers* no registo do domínio (ex.: PTisp, Amen, GoDaddy), **confirme que a lista importada tem todos os registos** do site (`A`, `CNAME`) e, sobretudo, do email (`MX`, `TXT`/SPF, DKIM). Se faltar algum, o site ou o email deixam de funcionar. Compare com o painel atual do domínio ou peça a lista a quem gere o site.
+* Se não puder mexer no DNS do domínio, registe um domínio barato só para isto (ex.: `suaempresa-gestao.pt`) diretamente na Cloudflare.
+
+**Passos (no PC do escritório, com a plataforma já instalada com `./instalar-servico.sh`):**
+
+1. No painel da Cloudflare abra **Zero Trust → Networks → Tunnels** e escolha **Create a tunnel**, tipo **Cloudflared**, com um nome como `bs-manager`. Os nomes dos menus podem mudar ligeiramente.
+2. No passo de instalação, escolha Debian e copie o **token**: o texto longo depois de `cloudflared service install` no comando que aparece.
+3. Em **Public Hostname**, preencha subdomínio `gestao`, o seu domínio, tipo `HTTP` e URL `localhost:8000`. Guarde.
+4. No PC, corra:
+   ```bash
+   ./instalar-cloudflare-tunnel.sh <TOKEN> https://gestao.suaempresa.pt
+   ```
+   O script instala o `cloudflared` como serviço e configura a plataforma para HTTPS. A plataforma passa a aceitar ligações só através do túnel (`HOST=127.0.0.1`).
+5. Abra `https://gestao.suaempresa.pt`. **Toda a gente, incluindo quem está no escritório, passa a usar este endereço.** O antigo `http://<IP>:8000` deixa de funcionar.
+
+Segurança: o login bloqueia um email durante 15 minutos após 10 tentativas falhadas. Para uma camada extra, como pedir um código enviado por email antes de mostrar a página, configure uma aplicação em **Zero Trust → Access → Applications** para o mesmo endereço.
+
+### Outras opções
+
+* **Tailscale:** VPN privada; cada colega instala a aplicação Tailscale. O plano gratuito é limitado a poucos utilizadores e só para uso não comercial.
 * **Abrir a porta no router:** não recomendado. A aplicação ficaria exposta sem HTTPS.
 
 ## Pôr online num servidor (acesso remoto pela internet)
@@ -95,6 +118,8 @@ docker compose exec db pg_dump -U bsmanager bsmanager > backup-$(date +%F).sql
 | `DEFAULT_VACATION_DAYS` | `22` | Dias de férias de cada novo utilizador |
 | `EXTRA_HOLIDAYS` | (vazio) | Feriados municipais em formato `MM-DD`, separados por vírgula (ex.: `06-13`) |
 | `SESSION_COOKIE_SECURE` | `0` | `1` quando servido por HTTPS |
+| `HOST` / `PORT` | `0.0.0.0` / `8000` | Onde o `serve.py` escuta (`127.0.0.1` = só este PC / túnel) |
+| `PUBLIC_URL` | (vazio) | Endereço público, mostrado ao arrancar |
 | `ADMIN_EMAIL` / `ADMIN_PASSWORD` / `ADMIN_NAME` | (vazio) | Primeiro administrador |
 
 ## Estrutura
