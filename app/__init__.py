@@ -31,7 +31,7 @@ def create_app(config_overrides=None):
             database_url = "postgresql+psycopg://" + database_url[len(prefix):]
 
     app.config.update(
-        SECRET_KEY=os.environ.get("SECRET_KEY", "dev-change-me"),
+        SECRET_KEY=os.environ.get("SECRET_KEY") or "dev-change-me",
         SQLALCHEMY_DATABASE_URI=database_url,
         SESSION_COOKIE_HTTPONLY=True,
         SESSION_COOKIE_SAMESITE="Lax",

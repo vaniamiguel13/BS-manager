@@ -26,9 +26,37 @@ Abra http://localhost:5000 e entre com o email e a palavra-passe acima. O primei
 
 Testes: `pytest`
 
-## Pôr online (acesso remoto pela internet)
+## Correr num PC do escritório (Linux)
 
-A forma recomendada é um servidor pequeno (VPS de ~5 €/mês na Hetzner, OVH, DigitalOcean, etc.) com Docker. O `docker-compose.yml` arranca três serviços:
+Para uma equipa pequena basta um PC Linux que esteja sempre ligado. Os dados ficam numa base SQLite em `instance/bs-manager.db`.
+
+1. Instale o Python e o Git (Ubuntu/Debian: `sudo apt install python3 python3-venv git`) e clone o repositório.
+2. Crie o ficheiro `.env` com o primeiro administrador:
+   ```bash
+   cp .env.example .env
+   ```
+   Preencha `SECRET_KEY`, `ADMIN_EMAIL` e `ADMIN_PASSWORD`. `DOMAIN` e `POSTGRES_PASSWORD` só são precisos com Docker.
+3. Instale como serviço, para arrancar sempre que o PC liga:
+   ```bash
+   ./instalar-servico.sh
+   ```
+   Se só quiser experimentar, use antes `./iniciar.sh` (para com Ctrl+C).
+4. Os colegas na mesma rede abrem `http://<IP-do-PC>:8000`. O IP aparece nos registos (`journalctl -u bs-manager`) ou com `hostname -I`. Se o PC tiver firewall: `sudo ufw allow 8000/tcp`.
+
+Cuidados:
+* O PC não pode suspender. Desative a suspensão automática nas definições de energia.
+* Peça ao responsável de rede um IP fixo para o PC (reserva DHCP no router), para o endereço não mudar.
+* Faça cópias de segurança regulares de `instance/bs-manager.db` (por exemplo, com uma tarefa `cron` que a copia para outro disco ou para a cloud).
+
+### Aceder de fora do escritório
+
+* **Tailscale (recomendado):** instale o [Tailscale](https://tailscale.com) no PC do escritório (`curl -fsSL https://tailscale.com/install.sh | sh && sudo tailscale up`) e no computador ou telemóvel de cada colega. Todos acedem a `http://<nome-do-pc>:8000` como se estivessem no escritório, sem abrir portas no router. A aplicação não fica exposta à internet. É gratuito para equipas pequenas.
+* **Cloudflare Tunnel:** dá um endereço público com HTTPS (ex.: `https://gestao.suaempresa.pt`) sem abrir portas, mas precisa de um domínio gerido na Cloudflare. Nesse caso, defina `SESSION_COOKIE_SECURE=1` no `.env`.
+* **Abrir a porta no router:** não recomendado. A aplicação ficaria exposta sem HTTPS.
+
+## Pôr online num servidor (acesso remoto pela internet)
+
+Outra opção é um servidor pequeno (VPS de ~5 €/mês na Hetzner, OVH, DigitalOcean, etc.) com Docker. O `docker-compose.yml` arranca três serviços:
 
 * **web**: a aplicação (gunicorn);
 * **db**: PostgreSQL, com os dados guardados num volume;
@@ -80,6 +108,7 @@ app/
   templates/       # páginas HTML (Jinja2)
   static/style.css
 tests/             # testes automáticos (pytest)
+serve.py           # servidor para correr num PC (usado por iniciar.sh / instalar-servico.sh)
 ```
 
 ## Ideias para próximas versões
