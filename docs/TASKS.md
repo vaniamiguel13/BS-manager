@@ -39,8 +39,11 @@ real-browser workflows and responsive acceptance. The navbar loading shift is
 fixed and the calendar is refined. The local Docker preview has been refreshed.
 The reviewed image-only updater preserves the database, secrets and connector,
 creates an encrypted pre-update backup, records the exact source revision and
-attempts rollback on activation failure. Actual target execution and recovery
-acceptance remain pending; earlier source slices are still not on the demo.
+attempts rollback on activation failure. The target update executed on 2026-11-01 and reports healthy with deployed source
+`88b81e5`. The actual backup was copied off the VM and restored in isolation; all
+nine table/history fingerprints match. Exact served assets, readiness, cookie
+flags, security headers and anonymous public Access redirects pass. Privileged
+runtime/restart verification and public reviewer authentication remain pending.
 
 ## Before completing the synthetic feedback preview
 
@@ -53,12 +56,12 @@ acceptance remain pending; earlier source slices are still not on the demo.
 - [ ] Create a named application account for the second approved reviewer through
   the existing administrator workflow; Access enrollment alone is not an account.
 - [ ] Resolve or recheck the Mac's cached DNS failure without weakening Access.
-- [ ] Rehearse encrypted backup and isolated restore from the staging deployment;
+- [x] Rehearse encrypted backup and isolated restore from the staging deployment;
   preserve its original database and credentials.
 - [ ] Coordinate an application restart/reboot check and verify recovery and
   persisted records. Previous host SSH/connector reboot tests predate the app.
-- [ ] Prepare a reviewed update/rollback artifact for the calendar, UX and PT/EN slices,
-  preserving staging secrets and records; deploy only with scoped authorization.
+- [x] Prepare and deploy the reviewed update/rollback artifact for calendar, UX,
+  PT/EN and security fixes, preserving staging secrets and records (2026-11-01).
 
 ## Before real company records
 

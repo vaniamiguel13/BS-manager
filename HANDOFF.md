@@ -5,11 +5,15 @@ Updated: 2026-11-01, Europe/Lisbon. Earlier dated sections are historical.
 Latest checkpoint (2026-11-01): the user authorized release validation, committing
 all reviewed source and deploying to the existing synthetic demo. The local
 PostgreSQL suite passes 189 tests; Docker, encrypted restore and real-browser
-acceptance pass. Navbar loading shifts, calendar styling and the users directory were refined;
-decorative copy/card accents were removed. The local preview was refreshed, retaining its data. See `docs/RELEASE_READINESS.md` for
-current evidence and acceptance gaps. The November update has not yet executed
-on the demo VM. The operator must enter sudo privately for the prepared update;
-noninteractive sudo is intentionally unavailable. Do not treat October deployment
+acceptance pass. Navbar loading shifts, calendar styling and the users directory
+were refined; decorative copy/card accents were removed. The local preview was
+refreshed, retaining its data. See `docs/RELEASE_READINESS.md` for current evidence
+and acceptance gaps. The November update executed on the demo VM on 2026-11-01 (healthy at
+18:34:59 UTC), deploying source `88b81e5`. Exact assets/readiness/security headers
+and anonymous Access redirects pass; the actual pre-update encrypted backup was
+restored on the Mac with all nine table/history fingerprints matching. Privileged
+runtime/restart verification and real public reviewer login remain pending.
+Noninteractive sudo is intentionally unavailable. Do not treat October deployment
 notes below as proof that current local source is deployed.
 
 ## Objective

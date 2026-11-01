@@ -45,30 +45,45 @@ coloured card-top stripe have been removed.
 
 ## Current demo evidence
 
-Read-only verification on 2026-11-01 reached the console-attested VM through the
-pinned Cloudflare Access SSH configuration. SSH, Docker and the existing connector
-were active. The operator has no noninteractive sudo permission. The existing
-application still uses the October preview; the November candidate is not yet
-installed. Its existing Compose and database initialization definitions match the
-candidate, allowing an image-only update without migrations or database reset.
+The image-only updater executed on 2026-11-01 and reports healthy at
+18:34:59 UTC. The deployed application source is commit
+`88b81e59872ee7c57ac5b4ec92f99afce9dfa33e`; the running image recorded by the
+updater is `sha256:993cf0233f22b89ce81b6ba4bece486b5c410e5a4d675343270db5fe411554c3`.
+The October preview was retained as a rollback image. Existing credentials,
+database volume, migrations and Cloudflare connector were preserved. The
+operator entered sudo privately; no password or tunnel token was handled in chat.
 
-Anonymous HTTPS requests to the staging root, login, readiness, stylesheet,
-calendar and administrator URLs redirect to Cloudflare Access. This verifies the
-anonymous gate, not the current dashboard policy or every identity flow. The
-approved web allowlist contains the two user-selected reviewer addresses; SSH
-retains its separate administrator policy. No Cloudflare changes are part of this
-release update.
+Independent post-deployment origin checks over pinned SSH confirm readiness,
+byte-identical stylesheet/theme/logo assets, CSRF login, Secure/HttpOnly/SameSite
+cookies, no-store responses, frame protection and HSTS. Anonymous public HTTPS
+requests to root, login, readiness, stylesheet, calendar and administrator URLs
+all redirect to Cloudflare Access. These checks do not establish the dashboard's
+current exact policy or successful/denied authenticated identity flows.
+
+The actual encrypted pre-update dump was copied into a private Mac recovery
+folder, decrypted through a pipe and fully restored into a disposable PostgreSQL
+database with no network exposure. All nine table/history fingerprints match the
+pre-update snapshot. No plaintext archive was written and the original demo
+database was not restored over. Ciphertext and the private recovery identity are
+retained off the VM with owner-only permissions; independent storage/key custody
+and scheduling remain production gates.
+
+The 22 Python distributions actually built on the demo VM were checked with
+PyPA pip-audit after deployment; no known vulnerabilities were reported. This
+does not cover the base OS or prove absence of undisclosed vulnerabilities.
+
+The separately scoped web and SSH Access policies were preserved. No Cloudflare
+changes formed part of this release update. A bounded runtime verifier is
+prepared to confirm actual container hardening, preserved records, rollback image,
+connector and SSH settings, and web-container restart recovery. Its privileged
+execution and real public reviewer login are still pending below.
 
 ## Remaining acceptance
 
-- Execute the reviewed image-only update with the operator's private sudo entry.
 - Verify the running image's exact committed revision, readiness, loopback binding,
   unchanged database/history fingerprints, secure cookies and restart behavior.
-- Copy the encrypted pre-update backup off the VM and restore it into an isolated
-  database with the separately retained Mac recovery identity. Preserve the source
-  database and existing credentials.
-- Recheck the anonymous Access gate after deployment. Have an approved reviewer
-  complete public Access/application login privately, and verify denial with an
+- Have an approved reviewer complete public Access/application login privately,
+  and verify denial with an
   operator-controlled non-allowlisted identity. Do not request PINs/passwords in chat.
 - Run hosted CI after a separately authorized push. Local CI-equivalent checks do
   not establish hosted CI success.

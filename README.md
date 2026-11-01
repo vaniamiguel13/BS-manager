@@ -9,13 +9,15 @@ administration. CRM, subscriptions, and accounting are outside this release.
 The original functional MVP is implemented and verified locally with synthetic
 data: attendance, work logs, leave, calendar and account administration. See the
 [requirements checklist](docs/REQUIREMENTS.md) for behavior and evidence.
-An authorized synthetic preview was deployed behind a separate Cloudflare Access
-policy on 2026-10-30. No real staff records should be entered yet. Live sign-in
+The synthetic preview was updated to the reviewed application release on
+2026-11-01 behind its separate Cloudflare Access policy. Its actual encrypted
+pre-update backup has been restored successfully in an isolated Mac database. No real staff records should be entered yet. Live sign-in
 acceptance, company policy sign-off, production placement and independent off-host
 backup ownership remain release gates. Hosted CI has not run. See the
 [remaining-work tracker](docs/TASKS.md) for current implementation and release gaps.
 The [2026-11-01 release validation](docs/RELEASE_READINESS.md) records the latest
-checks and distinguishes local acceptance from the pending demo update.
+checks and distinguishes local acceptance, verified deployment and remaining
+live acceptance gates.
 
 The recommended local path is Docker Compose with PostgreSQL. The web container
 uses a restricted database role; only the one-off migration/admin service uses
