@@ -1,7 +1,7 @@
 # Release validation — 2026-11-01
 
-This is a synthetic demo release candidate, not approval to handle real company
-records. The user authorized end-to-end checks, committing the reviewed source,
+This records a deployed synthetic demo release and its readiness assessment.
+It does not authorize real company records. The user authorized end-to-end checks, committing the reviewed source,
 and updating the existing demo VM. Pushing to GitHub has not been requested.
 
 ## Verified locally
@@ -25,13 +25,15 @@ and updating the existing demo VM. Pushing to GitHub has not been requested.
 - The encrypted-backup rehearsal verifies a complete schema/data restore into an
   isolated database, including history, triggers and recreated runtime access.
   Corrupt archives and wrong keys fail. This is separate from restoring a backup
-  taken from the actual demo VM, which remains deployment acceptance work.
+  taken from the actual demo VM; the separate completed target restore is
+  recorded below.
 - PyPA pip-audit reports no known vulnerabilities in the pinned Python requirements
   or the 22 installed Python distributions inspected in the local app image.
   This does not audit the base OS or certify that vulnerabilities cannot exist.
 - Release helper checks cover immutable archive validation, traversal/link/device
-  rejection and independent rollback attempts. The privileged update procedure
-  still requires actual target execution and verification.
+  rejection and independent rollback attempts. Actual target execution is
+  recorded below; the retained rollback image was verified, without deliberately
+  forcing a failed deployment on the shared demo.
 
 The review also fixed a login/reset race by retaining the verified session-token
 snapshot, rejected ambiguous/malformed login return paths, aligned supported date
@@ -57,8 +59,10 @@ Independent post-deployment origin checks over pinned SSH confirm readiness,
 byte-identical stylesheet/theme/logo assets, CSRF login, Secure/HttpOnly/SameSite
 cookies, no-store responses, frame protection and HSTS. Anonymous public HTTPS
 requests to root, login, readiness, stylesheet, calendar and administrator URLs
-all redirect to Cloudflare Access. These checks do not establish the dashboard's
-current exact policy or successful/denied authenticated identity flows.
+all redirect to Cloudflare Access. On 2026-11-01, the operator also confirmed
+that public Access authentication followed by application sign-in reaches the
+dashboard. This positive flow is operator-reported; it was not automated by the
+agent. A non-allowlisted identity denial remains unverified.
 
 The actual encrypted pre-update dump was copied into a private Mac recovery
 folder, decrypted through a pipe and fully restored into a disposable PostgreSQL
@@ -73,18 +77,31 @@ PyPA pip-audit after deployment; no known vulnerabilities were reported. This
 does not cover the base OS or prove absence of undisclosed vulnerabilities.
 
 The separately scoped web and SSH Access policies were preserved. No Cloudflare
-changes formed part of this release update. A bounded runtime verifier is
-prepared to confirm actual container hardening, preserved records, rollback image,
-connector and SSH settings, and web-container restart recovery. Its privileged
-execution and real public reviewer login are still pending below.
+changes formed part of this release update. The runtime verifier executed on
+2026-11-01 at 19:03:14 UTC; its report was independently retrieved over pinned SSH.
+It verified the exact committed running image, non-root/read-only web, dropped
+capabilities and disabled privilege escalation, loopback-only web, unpublished
+PostgreSQL, retained rollback image and backup digest. All nine record/history
+fingerprints remained unchanged through a web-container restart. Readiness
+recovered; the connector, Docker and SSH socket remained active. SSH syntax and
+effective public-key-only/root-disabled authentication settings passed.
 
-## Remaining acceptance
+The application source commit remains `88b81e5`. Subsequent repository commits
+record evidence and add operator verification tooling; they do not change the
+running application image. No push or hosted CI success is claimed.
 
-- Verify the running image's exact committed revision, readiness, loopback binding,
-  unchanged database/history fingerprints, secure cookies and restart behavior.
-- Have an approved reviewer complete public Access/application login privately,
-  and verify denial with an
-  operator-controlled non-allowlisted identity. Do not request PINs/passwords in chat.
+## Remaining production-readiness and coverage gaps
+
+- Verify denial using an operator-controlled non-allowlisted identity. Anonymous
+  redirects and the successful allowed login do not establish this identity flow.
+- Complete representative administrator/employee acceptance on the hosted site.
+  The full workflow matrix passed against isolated local fixtures; the hosted
+  checks cover actual assets, security settings, readiness, persistence/restart,
+  recovery and the operator-confirmed dashboard login. Full hosted CRUD has not
+  been exercised, and physical phones have not been certified.
+- Whole-VM reboot/Windows-host outage recovery for this application version is
+  untested. Web-container restart recovery is verified; historical SSH/connector
+  guest-reboot checks predate this app release.
 - Run hosted CI after a separately authorized push. Local CI-equivalent checks do
   not establish hosted CI success.
 

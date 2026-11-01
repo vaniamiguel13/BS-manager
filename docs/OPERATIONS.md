@@ -1,10 +1,13 @@
 # Operating the internal pilot
 
-Prepared on 2026-10-29; status reconciled on 2026-10-30. A separately authorized
-synthetic staging preview uses this deployment shape. Its readiness and anonymous
-Access gate have been verified; authenticated sign-in, target backup/restore and
-application restart recovery remain acceptance gates. This guide does not grant
-deployment authorization. Keep the operator SSH tunnel independent of the app.
+Prepared on 2026-10-29; status reconciled on 2026-11-01. The synthetic demo
+was updated to application commit `88b81e5`. Exact assets/readiness, runtime
+hardening, anonymous Access redirects, actual encrypted off-VM restore and web
+restart/persistence pass. The operator confirms public Access/application sign-in
+reaches the dashboard. Full hosted role workflows, non-allowlisted identity denial
+and company production-readiness decisions remain separate acceptance work.
+See [RELEASE_READINESS.md](RELEASE_READINESS.md) for the evidence boundaries.
+This guide does not grant deployment authorization. Keep operator SSH independent.
 
 ## Local versus HTTPS configuration
 

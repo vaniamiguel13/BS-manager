@@ -1,6 +1,8 @@
 # MVP requirements and acceptance
 
-Updated: 2026-11-01. This checklist reconciles the functional requirements in the
+Updated: 2026-11-01. Dated local checkpoints below are historical; the final
+release section and RELEASE_READINESS.md describe current deployment.
+This checklist reconciles the functional requirements in the
 latest Flask draft (`0f72f5b`) with the user's selected narrow scope and subsequent
 security/recovery requirements. CRM, subscriptions/accounting and the old draft's
 future ideas (email notifications, kanban, QR/geolocation, overtime and SSO) are
@@ -26,7 +28,7 @@ outside this MVP. This is local implementation acceptance, not deployment approv
 | Account recovery/security | Interactive operator reset, admin employee reset, revocable sessions and shared database login limits | Password/deactivation/remember-session tests, cross-app throttle and concurrent login tests |
 | Docker portability | Explicit migrations/admin initialization; restricted web DB role; loopback web and private PostgreSQL | Isolated Compose fresh init, CSRF login, schema consistency and container replacement |
 | Recoverable records | Encrypted custom dump; atomic publication; dump failure cleanup; separate clean restore with full schema/history/login | Actual disposable Docker backup/restore, corrupt/wrong-key rejection and permission checks |
-| HTTPS pilot preparation | Secure-cookie/read-only web overlay, independent host tunnel and operator runbook | Overlay review/configuration; no target deployment claimed |
+| HTTPS pilot preparation | Secure-cookie/read-only web overlay, independent host tunnel and operator runbook | Local overlay acceptance; exact demo runtime/hardening/restart verified on 2026-11-01 |
 
 ## Selected internal defaults
 
@@ -109,16 +111,21 @@ What it does: these checks use synthetic fixtures and clean up only resources
 created for their own run. Never point tests at a database containing real data.
 See README and the operations/recovery guides for prerequisites and effects.
 
-## Release gates outside local implementation
+## Deployed release and remaining readiness gaps — 2026-11-01
 
-The feature set is ready for the user's requirement-alignment review. The
-synthetic amd64 staging preview was separately authorized and deployed behind
-its own Access application; readiness and anonymous redirects for application,
-login, health and static paths passed. Authenticated and non-allowlisted identity
-flows, deployed CRUD and application reboot/restore checks remain pending.
-Real use also requires approved company rules, hosting/maintenance ownership,
-independent off-host backups, key escrow, schedule/retention/alerts and measured
-recovery objectives. The local restore proves the implemented archive path, not
-off-host disaster recovery. Hosted CI remains unverified. The calendar/date and
-UX slices are local and have not been deployed. Changes remain uncommitted until the
-user chooses to commit/publish them. See [TASKS.md](TASKS.md).
+The reviewed application source was committed as `88b81e5` and deployed to the
+existing synthetic demo behind its separate Cloudflare Access application.
+PostgreSQL acceptance now passes 189 tests. Exact served assets, secure cookies,
+readiness and anonymous redirects pass. The operator confirms successful public
+Access/application login. The runtime report independently verifies the committed
+image, hardening, loopback exposure, active services, SSH settings and web restart
+recovery with unchanged records/history. The actual encrypted pre-update dump was
+copied off the VM and restored into an isolated Mac database; all nine table
+fingerprints match. No real-data or hosted-CI acceptance is implied.
+
+Non-allowlisted identity denial, full hosted administrator/employee CRUD, physical
+phones and whole-host recovery for this application remain unverified. Real use
+also requires company policy approval, hosting/maintenance ownership, independent
+backup storage/key custody, scheduling/retention/alerts and measured recovery
+objectives. See [TASKS.md](TASKS.md) and
+[RELEASE_READINESS.md](RELEASE_READINESS.md) for current evidence and gaps.

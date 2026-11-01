@@ -11,9 +11,10 @@ data: attendance, work logs, leave, calendar and account administration. See the
 [requirements checklist](docs/REQUIREMENTS.md) for behavior and evidence.
 The synthetic preview was updated to the reviewed application release on
 2026-11-01 behind its separate Cloudflare Access policy. Its actual encrypted
-pre-update backup has been restored successfully in an isolated Mac database. No real staff records should be entered yet. Live sign-in
-acceptance, company policy sign-off, production placement and independent off-host
-backup ownership remain release gates. Hosted CI has not run. See the
+pre-update backup has been restored successfully in an isolated Mac database. No real staff records should be entered yet.
+Runtime/restart recovery and an operator-confirmed public sign-in passed. Broader
+hosted role/identity acceptance, company policy sign-off, production placement and
+independent off-host backup ownership remain production gates. Hosted CI has not run. See the
 [remaining-work tracker](docs/TASKS.md) for current implementation and release gaps.
 The [2026-11-01 release validation](docs/RELEASE_READINESS.md) records the latest
 checks and distinguishes local acceptance, verified deployment and remaining

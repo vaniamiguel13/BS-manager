@@ -11,8 +11,11 @@ refreshed, retaining its data. See `docs/RELEASE_READINESS.md` for current evide
 and acceptance gaps. The November update executed on the demo VM on 2026-11-01 (healthy at
 18:34:59 UTC), deploying source `88b81e5`. Exact assets/readiness/security headers
 and anonymous Access redirects pass; the actual pre-update encrypted backup was
-restored on the Mac with all nine table/history fingerprints matching. Privileged
-runtime/restart verification and real public reviewer login remain pending.
+restored on the Mac with all nine table/history fingerprints matching. Runtime/restart verification passed on 2026-11-01 at 19:03:14 UTC and its report
+was independently retrieved. All nine fingerprints remain unchanged. The user
+confirmed public Access/application login reaches the dashboard. Remaining gaps
+include non-allowlisted identity denial, full hosted role/CRUD acceptance, hosted
+CI and company production-readiness decisions.
 Noninteractive sudo is intentionally unavailable. Do not treat October deployment
 notes below as proof that current local source is deployed.
 
