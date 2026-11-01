@@ -1,4 +1,5 @@
 from datetime import date, timedelta
+import secrets
 
 from flask_login import UserMixin
 from werkzeug.security import check_password_hash, generate_password_hash
@@ -6,6 +7,8 @@ from werkzeug.security import check_password_hash, generate_password_hash
 from . import db, login_manager
 from .holidays import is_working_day
 from .utils import now
+from .db_types import UTCDateTime
+from .attendance_time import utc_now
 
 
 class User(UserMixin, db.Model):
@@ -18,6 +21,16 @@ class User(UserMixin, db.Model):
     vacation_days = db.Column(db.Integer, default=22, nullable=False)
     color = db.Column(db.String(7), default="#3b82f6", nullable=False)
     created_at = db.Column(db.DateTime, default=now, nullable=False)
+
+    session_token = db.Column(db.String(64), nullable=False, default=lambda: secrets.token_hex(32), server_default="", index=True, unique=True)
+    working_weekdays = db.Column(db.String(13), nullable=False, default="0,1,2,3,4", server_default="0,1,2,3,4")
+
+    def get_id(self):
+        return self.session_token
+
+    def entitlement(self, year):
+        override = db.session.get(LeaveAllowance, (self.id, year))
+        return override.days if override else self.vacation_days
 
     sessions = db.relationship(
         "WorkSession", back_populates="user", cascade="all, delete-orphan", foreign_keys="WorkSession.user_id"
@@ -32,6 +45,7 @@ class User(UserMixin, db.Model):
 
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
+        self.session_token = secrets.token_hex(32)
 
     def check_password(self, password):
         return check_password_hash(self.password_hash, password)
@@ -41,7 +55,7 @@ class User(UserMixin, db.Model):
         return self.active
 
     def open_session(self):
-        return WorkSession.query.filter_by(user_id=self.id, end=None).first()
+        return WorkSession.query.filter_by(user_id=self.id, end=None, voided_at=None).first()
 
     def vacation_used(self, year, include_pending=True):
         statuses = [LeaveRequest.APPROVED] + ([LeaveRequest.PENDING] if include_pending else [])
@@ -53,34 +67,53 @@ class User(UserMixin, db.Model):
         return sum(r.working_days(year) for r in requests)
 
     def vacation_balance(self, year):
-        return self.vacation_days - self.vacation_used(year)
+        return self.entitlement(year) - self.vacation_used(year)
 
 
 @login_manager.user_loader
 def load_user(user_id):
-    return db.session.get(User, int(user_id))
+    return User.query.filter_by(session_token=user_id, active=True).first() if isinstance(user_id, str) and len(user_id) == 64 else None
 
 
 class WorkSession(db.Model):
-    """Um par de picagens: entrada (start) e saída (end). `end` vazio = a trabalhar."""
-
+    """UTC attendance interval. Voided rows remain available to administrators."""
+    __table_args__ = (
+        db.CheckConstraint('"end" IS NULL OR "end" > start', name="ck_work_session_positive"),
+        db.Index("uq_work_session_open", "user_id", unique=True,
+                 postgresql_where=db.text('"end" IS NULL AND voided_at IS NULL'),
+                 sqlite_where=db.text('"end" IS NULL AND voided_at IS NULL')),
+    )
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False, index=True)
-    start = db.Column(db.DateTime, nullable=False, index=True)
-    end = db.Column(db.DateTime)
+    start = db.Column(UTCDateTime(), nullable=False, index=True)
+    end = db.Column(UTCDateTime())
     note = db.Column(db.String(255), default="")
     edited_by_id = db.Column(db.Integer, db.ForeignKey("user.id"))
-
+    voided_at = db.Column(UTCDateTime())
+    version = db.Column(db.Integer, nullable=False, default=1, server_default="1")
+    __mapper_args__ = {"version_id_col": version}
     user = db.relationship("User", back_populates="sessions", foreign_keys=[user_id])
     edited_by = db.relationship("User", foreign_keys=[edited_by_id])
 
     @property
     def duration(self):
-        return (self.end or now()) - self.start
+        return max((self.end or utc_now()) - self.start, timedelta())
 
     @property
     def hours(self):
         return self.duration.total_seconds() / 3600
+
+
+class AttendanceAudit(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    session_id = db.Column(db.Integer, db.ForeignKey("work_session.id"), nullable=False, index=True)
+    actor_id = db.Column(db.Integer, db.ForeignKey("user.id"))
+    action = db.Column(db.String(20), nullable=False)
+    recorded_at = db.Column(UTCDateTime(), nullable=False, default=utc_now)
+    reason = db.Column(db.String(500), nullable=False)
+    before = db.Column(db.JSON)
+    after = db.Column(db.JSON, nullable=False)
+    actor = db.relationship("User")
 
 
 class TaskEntry(db.Model):
@@ -99,6 +132,11 @@ class TaskEntry(db.Model):
 
 
 class LeaveRequest(db.Model):
+    __table_args__ = (
+        db.CheckConstraint('end_date >= start_date', name='ck_leave_dates'),
+        db.CheckConstraint("status IN ('pendente','aprovado','rejeitado','cancelado')", name='ck_leave_status'),
+        db.CheckConstraint("kind IN ('ferias','falta','baixa','formacao','teletrabalho','outro')", name='ck_leave_kind'),
+    )
     PENDING = "pendente"
     APPROVED = "aprovado"
     REJECTED = "rejeitado"
@@ -120,6 +158,9 @@ class LeaveRequest(db.Model):
     end_date = db.Column(db.Date, nullable=False)
     reason = db.Column(db.String(500), default="")
     status = db.Column(db.String(20), default=PENDING, nullable=False, index=True)
+    version = db.Column(db.Integer, nullable=False, default=1, server_default="1")
+    working_weekdays = db.Column(db.String(13), nullable=False, default="0,1,2,3,4", server_default="0,1,2,3,4")
+    __mapper_args__ = {"version_id_col": version}
     reviewer_id = db.Column(db.Integer, db.ForeignKey("user.id"))
     reviewed_at = db.Column(db.DateTime)
     review_note = db.Column(db.String(500), default="")
@@ -139,7 +180,10 @@ class LeaveRequest(db.Model):
             d += timedelta(days=1)
 
     def working_days(self, year=None):
-        return sum(1 for d in self.dates() if is_working_day(d) and (year is None or d.year == year))
+        weekdays = {int(day) for day in (self.working_weekdays or "0,1,2,3,4").split(',')}
+        from .holidays import holidays
+        return sum(1 for d in self.dates() if d.weekday() in weekdays and d not in holidays(d.year)
+                   and (year is None or d.year == year))
 
     def overlaps(self, start: date, end: date):
         return self.start_date <= end and start <= self.end_date
@@ -158,3 +202,28 @@ class Event(db.Model):
     created_at = db.Column(db.DateTime, default=now, nullable=False)
 
     created_by = db.relationship("User")
+
+
+class LeaveAudit(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    leave_id = db.Column(db.Integer, db.ForeignKey('leave_request.id'), nullable=False, index=True)
+    actor_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    action = db.Column(db.String(20), nullable=False)
+    recorded_at = db.Column(UTCDateTime(), nullable=False, default=utc_now)
+    before = db.Column(db.JSON)
+    after = db.Column(db.JSON, nullable=False)
+    actor = db.relationship('User')
+
+
+class LeaveAllowance(db.Model):
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), primary_key=True)
+    year = db.Column(db.Integer, primary_key=True)
+    days = db.Column(db.Integer, nullable=False)
+    __table_args__ = (db.CheckConstraint('days >= 0 AND days <= 366', name='ck_allowance_days'),)
+
+
+class LoginThrottle(db.Model):
+    key = db.Column(db.String(64), primary_key=True)
+    failures = db.Column(db.Integer, nullable=False, default=0)
+    window_start = db.Column(UTCDateTime(), nullable=False)
+    blocked_until = db.Column(UTCDateTime())

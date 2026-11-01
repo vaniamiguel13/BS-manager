@@ -1,5 +1,8 @@
 FROM python:3.13-slim
 
+ARG SOURCE_COMMIT=uncommitted
+LABEL org.opencontainers.image.revision=$SOURCE_COMMIT
+
 ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1
 WORKDIR /app
 
@@ -7,6 +10,7 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 COPY app ./app
+COPY migrations ./migrations
 COPY wsgi.py .
 
 RUN useradd --create-home appuser && mkdir -p /app/instance && chown appuser /app/instance

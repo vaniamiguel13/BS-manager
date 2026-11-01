@@ -3,17 +3,15 @@ from datetime import datetime, time, timedelta
 from flask import Blueprint, render_template
 from flask_login import current_user, login_required
 
-from ..models import LeaveRequest, TaskEntry, WorkSession
+from ..models import LeaveRequest, TaskEntry
 from ..utils import today
+from .attendance import slices_between
 
 bp = Blueprint("dashboard", __name__)
 
 
 def worked_between(user_id, start, end):
-    sessions = WorkSession.query.filter(
-        WorkSession.user_id == user_id, WorkSession.start >= start, WorkSession.start < end
-    ).all()
-    return sum((s.duration for s in sessions), timedelta())
+    return sum((row.duration for row in slices_between(user_id, start.date(), end.date())), timedelta())
 
 
 @bp.route("/")
@@ -36,11 +34,7 @@ def index():
         LeaveRequest.query.filter_by(status=LeaveRequest.PENDING).count() if current_user.is_admin else 0
     )
     today_tasks = TaskEntry.query.filter_by(user_id=current_user.id, date=d).all()
-    today_sessions = (
-        WorkSession.query.filter(WorkSession.user_id == current_user.id, WorkSession.start >= day_start)
-        .order_by(WorkSession.start)
-        .all()
-    )
+    today_sessions = slices_between(current_user.id, d, d + timedelta(days=1))
 
     return render_template(
         "dashboard.html",

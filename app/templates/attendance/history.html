@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>{{ _('Histórico da picagem') }} · {{ session.user.name }}</h1>
+{% if session.voided_at %}<p>{{ _('Picagem anulada; excluída dos totais.') }}</p>{% endif %}
+{% for event in events %}
+<section class="card">
+  <h2>{{ {'clock-in':_('Entrada'), 'clock-out':_('Saída'), 'manual':_('Registo manual'), 'correct':_('Correção'), 'void':_('Anulação'), 'imported':_('Importação inicial')}.get(event.action, event.action) }}</h2>
+  <p>{{ event.recorded_at|attendance_local|dt }} · {{ event.actor.name if event.actor else _('Autor original desconhecido') }}</p>
+  <p>{{ _('Motivo:') }} {{ event.reason }}</p>
+  {% if event.action == 'imported' %}<p class="muted">{{ _('Antes: horas locais originais (fuso indicado no motivo). Depois: UTC.') }}</p>{% endif %}
+  <table><thead><tr><th>{{ _('Campo') }}</th><th>{{ _('Antes') }}</th><th>{{ _('Depois') }}</th></tr></thead><tbody>
+  {% for field,label in [('user_id',_('Colaborador (ID)')),('start',_('Entrada')),('end',_('Saída')),('note',_('Nota')),('voided_at',_('Anulação (UTC)'))] %}
+  <tr><td>{{ label }}</td><td>{{ event.before.get(field) if event.before else '—' }}</td><td>{{ event.after.get(field) or '—' }}</td></tr>
+  {% endfor %}
+  </tbody></table>
+</section>
+{% endfor %}
+<a href="{{ url_for('attendance.index', user=session.user_id) }}">{{ _('Voltar às picagens') }}</a>
+{% endblock %}

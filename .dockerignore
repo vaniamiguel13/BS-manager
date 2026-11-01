@@ -1,0 +1,9 @@
+*
+!requirements.txt
+!wsgi.py
+!app/
+!app/**
+!migrations/
+!migrations/**
+**/__pycache__/
+**/*.pyc

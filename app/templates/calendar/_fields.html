@@ -1,0 +1,12 @@
+{% set values = request.form if request.method == 'POST' else {} %}
+<label>{{ _('Título') }} <input name="title" required maxlength="200" value="{{ values.get('title', event.title if event else '') }}"></label>
+<label class="check"><input type="checkbox" name="all_day" value="1" id="all-day" {{ 'checked' if (values.get('all_day') if request.method == 'POST' else event and event.all_day) }}> {{ _('Dia inteiro') }}</label>
+<div class="timed grid grid-2">
+  <label>{{ _('Início') }} <input type="datetime-local" step="1" name="start" value="{{ values.get('start', event.start.isoformat() if event else '') }}" id="ev-start"></label>
+  <label>{{ _('Fim') }} <input type="datetime-local" step="1" name="end" value="{{ values.get('end', event.end.isoformat() if event and event.end else '') }}" id="ev-end"></label>
+</div>
+<div class="allday grid grid-2" hidden>
+  <label>{{ _('De') }} <input type="date" name="start_date" value="{{ values.get('start_date', event.start.date().isoformat() if event else '') }}" id="ev-start-date"></label>
+  <label>{{ _('Até') }} <input type="date" name="end_date" value="{{ values.get('end_date', (event.end or event.start).date().isoformat() if event else '') }}" id="ev-end-date"></label>
+</div>
+<label>{{ _('Descrição') }} <textarea name="description" rows="3" maxlength="10000">{{ values.get('description', event.description if event else '') }}</textarea></label>

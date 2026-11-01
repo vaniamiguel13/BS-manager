@@ -1,79 +1,81 @@
 {% extends "base.html" %}
 {% from "_macros.html" import csrf %}
+{% from "_icons.html" import icon %}
 {% block content %}
-<h1>Olá, {{ current_user.name.split()[0] }}</h1>
+<div class="page-intro dashboard-intro"><div><h1>{{ _('Olá, {name}', name=current_user.name.split()[0]) }}<span class="heading-dot">.</span></h1></div><a class="intro-calendar" aria-label="{{ _('Ver calendário') }}" href="{{ url_for('calendar.index') }}">{{ icon('calendar') }}<span>{{ _('Ver calendário') }}</span>{{ icon('arrow') }}</a></div>
 
 <div class="grid grid-4 stats">
-  <div class="card stat"><span class="muted">Hoje</span><strong>{{ worked_today|hours }}</strong></div>
-  <div class="card stat"><span class="muted">Esta semana</span><strong>{{ worked_week|hours }}</strong></div>
-  <div class="card stat"><span class="muted">Férias disponíveis ({{ today.year }})</span><strong>{{ balance }} dias</strong></div>
+  <div class="card stat stat-blue"><span class="stat-label">{{ icon('clock') }}{{ _('Horas hoje') }}</span><strong>{{ worked_today|hours }}</strong></div>
+  <div class="card stat"><span class="stat-label">{{ icon('tasks') }}{{ _('Esta semana') }}</span><strong>{{ worked_week|hours }}</strong></div>
+  <div class="card stat stat-mint"><span class="stat-label">{{ icon('leave') }}{{ _('Férias disponíveis · {year}', year=today.year) }}</span><strong>{{ balance }} {{ _('dias') }}</strong></div>
   {% if current_user.is_admin %}
-  <a class="card stat link-card" href="{{ url_for('leave.index') }}"><span class="muted">Pedidos por aprovar</span><strong>{{ pending_reviews }}</strong></a>
+  <a class="card stat stat-pink link-card" href="{{ url_for('leave.index') }}"><span class="stat-label">{{ icon('users') }}{{ _('Pedidos por aprovar') }}</span><strong>{{ pending_reviews }}</strong></a>
   {% else %}
-  <div class="card stat"><span class="muted">Tarefas hoje</span><strong>{{ today_tasks|length }}</strong></div>
+  <div class="card stat stat-pink"><span class="stat-label">{{ icon('tasks') }}{{ _('Tarefas hoje') }}</span><strong>{{ today_tasks|length }}</strong></div>
   {% endif %}
 </div>
 
-<div class="grid grid-2">
+<div class="grid grid-2 dashboard-work">
   <section class="card clock">
-    <h2>Picagem</h2>
+    <div class="clock-heading"><span class="clock-icon">{{ icon('clock') }}</span><a href="{{ url_for('attendance.index') }}">{{ _('Ver picagens') }} {{ icon('arrow') }}</a></div>
+    <h2>{{ _('Picagem') }}</h2>
     {% if open_session %}
-      <p class="status working">● A trabalhar desde as <strong>{{ open_session.start|t }}</strong>
-        {% if open_session.start.date() != today %}de {{ open_session.start|d }}{% endif %}</p>
+      <p class="status working">● {{ _('A trabalhar desde as {time}', time=open_session.start|attendance_local|t) }}
+        {% if (open_session.start|attendance_local).date() != today %}{{ _('de {date}', date=open_session.start|attendance_local|d) }}{% endif %}</p>
       <form method="post" action="{{ url_for('attendance.clock_out') }}">
         {{ csrf() }}
-        <input name="note" placeholder="Nota (opcional)" maxlength="255">
-        <button class="btn btn-danger btn-big">Registar saída</button>
+        <label class="visually-hidden" for="clock-note">{{ _('Nota da picagem') }}</label><input id="clock-note" name="note" placeholder="{{ _('Nota (opcional)') }}" maxlength="255">
+        <button class="btn btn-danger btn-big">{{ _('Registar saída') }}</button>
       </form>
     {% else %}
-      <p class="status">○ Fora de serviço</p>
+      <p class="status">○ {{ _('Fora de serviço') }}</p>
       <form method="post" action="{{ url_for('attendance.clock_in') }}">
         {{ csrf() }}
-        <input name="note" placeholder="Nota (opcional, ex.: teletrabalho)" maxlength="255">
-        <button class="btn btn-success btn-big">Registar entrada</button>
+        <label class="visually-hidden" for="clock-note">{{ _('Nota da picagem') }}</label><input id="clock-note" name="note" placeholder="{{ _('Nota (opcional, ex.: teletrabalho)') }}" maxlength="255">
+        <button class="btn btn-success btn-big">{{ _('Registar entrada') }}</button>
       </form>
     {% endif %}
     {% if today_sessions %}
       <ul class="timeline">
         {% for s in today_sessions %}
-          <li>{{ s.start|t }} → {{ s.end|t if s.end else '…' }} <span class="muted">({{ s.duration|hours }})</span></li>
+          <li>{{ s.start|attendance_local|t }} → {{ s.end|attendance_local|t if not s.is_open else '…' }} <span class="muted">({{ s.duration|hours }})</span></li>
         {% endfor %}
       </ul>
     {% endif %}
   </section>
 
-  <section class="card">
-    <div class="card-header">
-      <h2>Tarefas de hoje</h2>
-      <a class="btn btn-light" href="{{ url_for('tasks.edit') }}">+ Nova</a>
+  <section class="card today-work">
+      <div class="card-header">
+      <div><h2>{{ _('Tarefas de hoje') }}</h2></div>
+      <a class="btn btn-light" href="{{ url_for('tasks.edit') }}">{{ _('+ Nova') }}</a>
     </div>
     {% if today_tasks %}
       <ul class="plain">
         {% for t in today_tasks %}
-          <li><strong>{{ t.title }}</strong>{% if t.project %} <span class="tag">{{ t.project }}</span>{% endif %}
-            <span class="muted">· {{ t.hours|hours }}</span></li>
+          <li><div class="task-copy"><strong>{{ t.title }}</strong>{% if t.project %}<span class="task-project">{{ t.project }}</span>{% endif %}</div><span class="time-value">{{ t.hours|hours }}</span></li>
         {% endfor %}
       </ul>
     {% else %}
-      <p class="muted">Ainda não registou tarefas hoje.</p>
+      <p class="muted">{{ _('Ainda não registou tarefas hoje.') }}</p>
     {% endif %}
+    <div class="today-work-total"><span>{{ _('Total registado') }}</span><strong>{{ today_tasks|map(attribute='hours')|sum|hours }}</strong></div>
   </section>
 </div>
 
-<section class="card">
-  <h2>Ausências nos próximos 30 dias</h2>
+<section class="card upcoming-team">
+  <div class="card-header"><div><h2>{{ _('Ausências nos próximos 30 dias') }}</h2></div><span class="section-icon">{{ icon('leave') }}</span></div>
   {% if upcoming %}
     <table>
-      <thead><tr><th>Colaborador</th><th>Tipo</th><th>De</th><th>Até</th></tr></thead>
+      <thead><tr><th>{{ _('Colaborador') }}</th><th>{{ _('Tipo') }}</th><th>{{ _('De') }}</th><th>{{ _('Até') }}</th></tr></thead>
       <tbody>
       {% for l in upcoming %}
         <tr><td><span class="dot" style="background: {{ l.user.color }}"></span>{{ l.user.name }}</td>
-          <td>{{ l.kind_label }}</td><td>{{ l.start_date|d }}</td><td>{{ l.end_date|d }}</td></tr>
+          <td>{{ _(l.kind_label) if current_user.is_admin or l.user_id == current_user.id else _('Indisponível') }}</td><td>{{ l.start_date|d }}</td><td>{{ l.end_date|d }}</td></tr>
       {% endfor %}
       </tbody>
     </table>
   {% else %}
-    <p class="muted">Ninguém ausente nos próximos 30 dias.</p>
+    <p class="muted">{{ _('Ninguém ausente nos próximos 30 dias.') }}</p>
   {% endif %}
 </section>
 {% endblock %}

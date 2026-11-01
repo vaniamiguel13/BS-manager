@@ -1,27 +1,17 @@
-import time
-from collections import defaultdict
-from urllib.parse import urlparse
+import re
+from urllib.parse import unquote
 
-from flask import Blueprint, flash, redirect, render_template, request, url_for
+from flask import Blueprint, redirect, render_template, request, url_for
+from ..i18n import flash
 from flask_login import current_user, login_required, login_user, logout_user
+from sqlalchemy.exc import SQLAlchemyError
+
+from ..services.authentication import authenticate
 
 from .. import db
 from ..models import User
 
 bp = Blueprint("auth", __name__)
-
-# Proteção contra tentativas repetidas: após MAX_FAILURES falhas para o mesmo email,
-# o login fica bloqueado durante LOCKOUT_SECONDS. Guardado em memória (um só processo).
-MAX_FAILURES = 10
-LOCKOUT_SECONDS = 15 * 60
-_failures = defaultdict(list)
-
-
-def _is_locked(email):
-    cutoff = time.monotonic() - LOCKOUT_SECONDS
-    _failures[email] = [t for t in _failures[email] if t > cutoff]
-    return len(_failures[email]) >= MAX_FAILURES
-
 
 @bp.route("/login", methods=["GET", "POST"])
 def login():
@@ -30,19 +20,27 @@ def login():
     if request.method == "POST":
         email = request.form.get("email", "").strip().lower()
         password = request.form.get("password", "")
-        if _is_locked(email):
+        if len(email) > 255 or len(password) > 1024:
+            flash("Email ou palavra-passe inválidos.", "error")
+            return render_template("auth/login.html"), 400
+        try:
+            user, locked = authenticate(email, password)
+        except SQLAlchemyError:
+            db.session.rollback()
+            flash("Não foi possível iniciar sessão. Tente novamente.", "error")
+            return render_template("auth/login.html"), 503
+        if locked:
             flash("Demasiadas tentativas falhadas. Tente novamente daqui a 15 minutos.", "error")
             return render_template("auth/login.html"), 429
-        user = User.query.filter_by(email=email).first()
-        if user and user.active and user.check_password(password):
-            _failures.pop(email, None)
+        if user:
             login_user(user, remember=bool(request.form.get("remember")))
             next_url = request.args.get("next", "")
-            # Só aceitar redirecionamentos internos.
-            if not next_url.startswith("/") or urlparse(next_url).netloc:
+            # Reject ambiguous network paths before parsing can fail or normalize them.
+            decoded_next = unquote(next_url)
+            if (not decoded_next.startswith('/') or decoded_next.startswith('//')
+                    or '\\' in decoded_next or any(ord(c) < 32 for c in decoded_next)):
                 next_url = url_for("dashboard.index")
             return redirect(next_url)
-        _failures[email].append(time.monotonic())
         flash("Email ou palavra-passe inválidos.", "error")
     return render_template("auth/login.html")
 
@@ -66,21 +64,25 @@ def profile():
             confirm = request.form.get("confirm_password", "")
             if not current_user.check_password(current):
                 flash("A palavra-passe atual está incorreta.", "error")
-            elif len(new) < 8:
-                flash("A nova palavra-passe deve ter pelo menos 8 caracteres.", "error")
+            elif not 12 <= len(new) <= 1024:
+                flash("A nova palavra-passe deve ter entre 12 e 1024 caracteres.", "error")
             elif new != confirm:
                 flash("As palavras-passe não coincidem.", "error")
             else:
                 current_user.set_password(new)
                 db.session.commit()
+                login_user(current_user, remember=False, fresh=True)
                 flash("Palavra-passe alterada.", "success")
         elif action == "profile":
             name = request.form.get("name", "").strip()
             color = request.form.get("color", "")
-            if name:
-                current_user.name = name
-            if len(color) == 7 and color.startswith("#"):
-                current_user.color = color
+            if not name or len(name) > 120:
+                flash("Indique um nome entre 1 e 120 caracteres.", "error")
+                return render_template("auth/profile.html"), 400
+            if not re.fullmatch(r"#[0-9a-fA-F]{6}", color):
+                flash("Escolha uma cor válida para o calendário.", "error")
+                return render_template("auth/profile.html"), 400
+            current_user.name, current_user.color = name, color
             db.session.commit()
             flash("Perfil atualizado.", "success")
         return redirect(url_for("auth.profile"))

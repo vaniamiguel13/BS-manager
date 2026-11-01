@@ -1,0 +1,184 @@
+/* Dark theme overrides. Keep the forest header and clock panel as brand anchors. */
+html[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #111a17;
+  --surface: #1b2622;
+  --text: #e5eee9;
+  --muted: #afbeb6;
+  --border: #35473f;
+  --primary: #94d7b1;
+  --primary-dark: #1d6145;
+  --success: #83d0a4;
+  --danger: #ff9db2;
+  --warning: #e8bd73;
+}
+
+html[data-theme="dark"] body { background: var(--bg); color: var(--text); }
+html[data-theme="dark"] a { color: var(--primary); }
+html[data-theme="dark"] :focus-visible { outline-color: #9be2bc; }
+html[data-theme="dark"] .skip-link { background: var(--surface); color: var(--text); }
+
+/* Header tools remain legible against the existing forest navigation. */
+html[data-theme="dark"] .language-switch,
+html[data-theme="dark"] .theme-switch {
+  background: #f3f7f4;
+  border-color: #cbdad4;
+}
+html[data-theme="dark"] .language-switch button,
+html[data-theme="dark"] .theme-switch {
+  color: #315447;
+}
+html[data-theme="dark"] .language-switch button[aria-pressed="true"],
+html[data-theme="dark"] .theme-switch[aria-pressed="true"] {
+  background: var(--forest);
+  color: #fff;
+}
+html[data-theme="dark"] .account-dropdown {
+  background: #202d28;
+  color: var(--text);
+  border-color: #43574e;
+  box-shadow: 0 14px 36px #07100dcc;
+}
+html[data-theme="dark"] .account-dropdown a,
+html[data-theme="dark"] .account-dropdown button { color: var(--text); }
+html[data-theme="dark"] .account-dropdown a:hover,
+html[data-theme="dark"] .account-dropdown button:hover { background: #2c3c35; }
+
+html[data-theme="dark"] .card,
+html[data-theme="dark"] .account-dropdown,
+html[data-theme="dark"] dialog { background-color: var(--surface); }
+html[data-theme="dark"] .stat-blue { background: #202d40; border-color: #344861; }
+html[data-theme="dark"] .stat-mint { background: #20352b; border-color: #365443; }
+html[data-theme="dark"] .stat-pink { background: #382935; border-color: #594052; }
+html[data-theme="dark"] .stat-label { color: #c4d5cd; }
+html[data-theme="dark"] .link-card:hover { border-color: #9b78a0; }
+html[data-theme="dark"] .heading-dot { color: #94d7b1; }
+html[data-theme="dark"] .intro-calendar { background: #202d28; border-color: #40574b; }
+
+/* Controls use dark native surfaces while retaining a clear focus ring. */
+html[data-theme="dark"] input:not([type="checkbox"]):not([type="color"]),
+html[data-theme="dark"] select,
+html[data-theme="dark"] textarea {
+  background-color: #121c18;
+  border-color: #465a50;
+  color: var(--text);
+}
+html[data-theme="dark"] input::placeholder,
+html[data-theme="dark"] textarea::placeholder { color: #a1b1a8; }
+html[data-theme="dark"] input:focus,
+html[data-theme="dark"] select:focus,
+html[data-theme="dark"] textarea:focus {
+  border-color: #91d8b0;
+  box-shadow: 0 0 0 3px #77c99a38;
+}
+html[data-theme="dark"] input:disabled,
+html[data-theme="dark"] select:disabled,
+html[data-theme="dark"] textarea:disabled {
+  background-color: #293630;
+  color: #b0bdb6;
+}
+html[data-theme="dark"] input[type="color"] { background: var(--surface); }
+html[data-theme="dark"] select {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='m4 6 4 4 4-4' fill='none' stroke='%23afbeb6' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+}
+html[data-theme="dark"] fieldset { border-color: var(--border); }
+
+html[data-theme="dark"] .btn-primary,
+html[data-theme="dark"] .btn-success {
+  background: #286e4e;
+  border-color: #286e4e;
+  color: #fff;
+}
+html[data-theme="dark"] .btn-primary:hover,
+html[data-theme="dark"] .btn-success:hover { background: #347f5c; border-color: #347f5c; }
+html[data-theme="dark"] .btn-danger { background: #a73d58; border-color: #a73d58; color: #fff; }
+html[data-theme="dark"] .btn-danger:hover { background: #bd4c68; border-color: #bd4c68; }
+html[data-theme="dark"] .btn-light {
+  background: #26332e;
+  border-color: #46594f;
+  color: var(--text);
+}
+html[data-theme="dark"] .btn-light:hover { background: #31423a; border-color: #668271; }
+html[data-theme="dark"] button.link { color: var(--primary); }
+html[data-theme="dark"] button.link.danger,
+html[data-theme="dark"] .danger { color: var(--danger); }
+
+/* Keep the primary clock panel forest green, with its own bright controls. */
+html[data-theme="dark"] .clock { background: var(--forest); border-color: var(--forest); }
+html[data-theme="dark"] .clock .btn-success { background: #bfe6cd; border-color: #bfe6cd; color: #173f38; }
+html[data-theme="dark"] .clock .btn-success:hover { background: #d5f1df; border-color: #d5f1df; }
+html[data-theme="dark"] .clock .btn-danger { background: var(--blush); border-color: var(--blush); color: #643752; }
+html[data-theme="dark"] .clock .btn-danger:hover { background: #f9cbed; border-color: #f9cbed; }
+html[data-theme="dark"] .today-work ul.plain li { border-color: #34443d; }
+html[data-theme="dark"] .time-value { background: #293c32; color: #c6e6d3; }
+html[data-theme="dark"] .section-icon { background: #3c2d3a; color: #e6c8dd; }
+
+html[data-theme="dark"] th,
+html[data-theme="dark"] td { border-color: #35463f; }
+html[data-theme="dark"] th { color: #b4c6bd; }
+html[data-theme="dark"] tbody tr:hover { background: #24312b; }
+html[data-theme="dark"] tr.subtotal td { background: #25352d; }
+html[data-theme="dark"] tr.inactive { color: #a7b4ad; background: #202a25; }
+html[data-theme="dark"] .tag { background: #25354a; border-color: #3b5270; color: #c5d9fa; }
+html[data-theme="dark"] .badge-pendente { background: #49391f; color: #f0cf91; }
+html[data-theme="dark"] .badge-aprovado { background: #203a2d; color: #a9e3bf; }
+html[data-theme="dark"] .badge-rejeitado { background: #482b35; color: #f2afbf; }
+html[data-theme="dark"] .badge-cancelado { background: #2b3739; color: #c1d0d1; }
+html[data-theme="dark"] .dot.striped { background: repeating-linear-gradient(45deg, #9dbdaf 0 3px, #293c32 3px 6px); }
+
+html[data-theme="dark"] .flash-success { background: #20392c; border-color: #365b45; color: #b0e4c2; }
+html[data-theme="dark"] .flash-error { background: #422a33; border-color: #69404c; color: #f4b4c3; }
+html[data-theme="dark"] .flash-info { background: #243449; border-color: #3c5678; color: #c2d7f4; }
+html[data-theme="dark"] dialog { border-color: #43564c; color: var(--text); }
+html[data-theme="dark"] dialog::backdrop { background: #07110dcc; }
+
+/* Calendar surfaces follow the workspace palette without recoloring events. */
+html[data-theme="dark"] .fc {
+  --fc-border-color: #3a4b43;
+  --fc-button-bg-color: var(--surface);
+  --fc-button-border-color: var(--border);
+  --fc-button-hover-bg-color: #293a31;
+  --fc-button-hover-border-color: #526e5e;
+  --fc-button-active-bg-color: #bfe5ce;
+  --fc-button-active-border-color: #bfe5ce;
+  --fc-today-bg-color: #253a2e;
+  --fc-neutral-bg-color: #202b26;
+  --fc-page-bg-color: #1b2622;
+  --fc-list-event-hover-bg-color: #293a31;
+  color: var(--text);
+}
+html[data-theme="dark"] .fc .fc-col-header-cell-cushion,
+html[data-theme="dark"] .fc .fc-daygrid-day-number,
+html[data-theme="dark"] .fc .fc-list-day-text,
+html[data-theme="dark"] .fc .fc-list-day-side-text { color: #c2d5ca; }
+html[data-theme="dark"] .fc .fc-list-day-cushion { background: #293a31; }
+html[data-theme="dark"] .fc .fc-daygrid-day.fc-day-other .fc-daygrid-day-number { color: #84988d; }
+
+html[data-theme="dark"] .fc .fc-button-primary:not(:disabled).fc-button-active { color: #173f38; }
+html[data-theme="dark"] .fc .fc-h-event.calendar-holiday { background: #432f3d !important; border-color: #644251 !important; color: #f4c6df; }
+html[data-theme="dark"] .fc .fc-day-today .fc-daygrid-day-number { background: #bfe5ce; color: #173f38; }
+
+/* Login keeps the forest identity panel and darkens the form canvas. */
+html[data-theme="dark"] .guest { background: #111a17; }
+html[data-theme="dark"] .login-layout { background: var(--surface); border-color: #35473f; }
+html[data-theme="dark"] .login-card { background: var(--surface); }
+html[data-theme="dark"] .login-help { border-color: var(--border); }
+
+html[data-theme="dark"] .leave-filters { background: #19241f; border-color: var(--border); }
+html[data-theme="dark"] .leave-balance { background: #20342a; border-color: #365443; }
+html[data-theme="dark"] .balance-symbol { background: #2c4938; color: #b6e8c8; }
+html[data-theme="dark"] .balance-available span { color: #bddbc9; }
+html[data-theme="dark"] .balance-breakdown { border-color: #40564a; }
+html[data-theme="dark"] .leave-estimate { background: #202e40; border-color: #3d5573; }
+html[data-theme="dark"] .estimate-label { color: #c0d4ef; }
+html[data-theme="dark"] .leave-estimate p { color: #c0d1e4; }
+html[data-theme="dark"] .leave-estimate.estimate-error { background: #422a33; border-color: #69404c; }
+html[data-theme="dark"] .estimate-error strong,
+html[data-theme="dark"] .estimate-error p { color: #f4b4c3; }
+html[data-theme="dark"] .count-pill { background: #2c393e; color: #d0dcdf; }
+html[data-theme="dark"] .request-note { background: #222e2a; }
+html[data-theme="dark"] .request-days { color: #bddbc9; }
+
+html[data-theme="dark"] .fc .fc-list-event:hover td { background: #293a31; }
+
+html[data-theme="dark"] .fc .fc-day-other .fc-daygrid-day-top { opacity: 1; }

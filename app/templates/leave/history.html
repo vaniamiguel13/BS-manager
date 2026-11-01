@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+{% from "_macros.html" import status_badge %}
+{% macro audit_value(key, value) %}{% if key == 'kind' %}{{ _(kinds.get(value, value)) if value else '—' }}{% elif key == 'status' and value %}{{ status_badge(value) }}{% else %}{{ value or '—' }}{% endif %}{% endmacro %}
+{% block content %}<h1>{{ _('Histórico do pedido') }} · {{ record.user.name }}</h1>
+{% for event in events %}<section class="card"><h2>{{ {'request':_('Pedido'), 'aprovar':_('Aprovação'), 'rejeitar':_('Rejeição'), 'cancelar':_('Cancelamento')}.get(event.action, event.action) }}</h2>
+<p>{{ event.recorded_at|attendance_local|dt }} · {{ event.actor.name if event.actor else _('Autor original desconhecido') }}</p>
+<dl>{% for key,label in [('status',_('Estado')),('kind',_('Tipo')),('start_date',_('De')),('end_date',_('Até')),('reason',_('Motivo')),('review_note',_('Nota da decisão'))] %}
+<dt>{{ label }}</dt><dd>{{ audit_value(key, event.before.get(key)) if event.before else '—' }} → {{ audit_value(key, event.after.get(key)) }}</dd>{% endfor %}</dl></section>{% endfor %}
+<a href="{{ url_for('leave.index', ano=record.start_date.year, user=record.user_id) }}">{{ _('Voltar aos pedidos') }}</a>{% endblock %}

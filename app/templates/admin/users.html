@@ -1,26 +1,31 @@
 {% extends "base.html" %}
-{% block title %}Utilizadores · {{ company_name }}{% endblock %}
+{% block title %}{{ _('Utilizadores') }} · Management{% endblock %}
 {% block content %}
 <div class="page-header">
-  <h1>Utilizadores</h1>
-  <div class="actions"><a class="btn btn-primary" href="{{ url_for('admin.edit_user') }}">+ Novo utilizador</a></div>
+  <div class="directory-title"><h1>{{ _('Utilizadores') }}</h1><span class="directory-count" aria-label="{{ _('Utilizadores') }}: {{ users|length }}">{{ users|length }}</span></div>
+  <div class="actions"><a class="btn btn-primary" href="{{ url_for('admin.edit_user') }}">{{ _('+ Novo utilizador') }}</a></div>
 </div>
-<div class="card">
-  <table>
-    <thead><tr><th>Nome</th><th>Email</th><th>Perfil</th><th>Férias {{ year }}</th><th>Estado</th><th></th></tr></thead>
+<div class="card user-directory">
+  <table class="user-table" role="table">
+    <thead><tr role="row"><th scope="col">{{ _('Nome') }}</th><th scope="col">{{ _('Perfil') }}</th><th scope="col">{{ _('Férias {year}', year=year) }}</th><th scope="col">{{ _('Estado') }}</th><th scope="col"><span class="visually-hidden">{{ _('Ações') }}</span></th></tr></thead>
     <tbody>
     {% for u in users %}
-      <tr class="{{ 'inactive' if not u.active }}">
-        <td><span class="dot" style="background: {{ u.color }}"></span>{{ u.name }}</td>
-        <td>{{ u.email }}</td>
-        <td>{{ 'Administrador' if u.is_admin else 'Colaborador' }}</td>
-        <td>{{ u.vacation_balance(year) }} / {{ u.vacation_days }}</td>
-        <td>{{ 'Ativo' if u.active else 'Inativo' }}</td>
-        <td class="row-actions">
-          <a href="{{ url_for('admin.edit_user', user_id=u.id) }}">Editar</a>
-          <a href="{{ url_for('attendance.index', user=u.id) }}">Picagens</a>
-          <a href="{{ url_for('tasks.index', user=u.id) }}">Tarefas</a>
+      <tr role="row" class="{{ 'inactive' if not u.active }}">
+        <td role="cell" class="user-person">
+          <div class="user-identity">
+            <span class="user-avatar" aria-hidden="true">{{ u.name[:1]|upper }}<span style="background: {{ u.color }}"></span></span>
+            <div><strong>{{ u.name }}</strong><span class="user-email">{{ u.email }}</span></div>
+          </div>
         </td>
+        <td role="cell" data-label="{{ _('Perfil') }}"><span class="user-role {{ 'user-role-admin' if u.is_admin }}">{{ _('Administrador') if u.is_admin else _('Colaborador') }}</span></td>
+        <td role="cell" class="user-balance" data-label="{{ _('Férias {year}', year=year) }}"><strong>{{ u.vacation_balance(year) }}</strong><span> / {{ u.entitlement(year) }} {{ _('dias') }}</span></td>
+        <td role="cell" data-label="{{ _('Estado') }}"><span class="user-state {{ 'user-state-active' if u.active }}"><span aria-hidden="true"></span>{{ _('Ativo') if u.active else _('Inativo') }}</span></td>
+        <td role="cell" class="user-links"><div class="user-actions">
+          <a class="user-edit" href="{{ url_for('admin.edit_user', user_id=u.id) }}">{{ _('Editar') }}<span class="visually-hidden"> {{ u.name }}</span></a>
+          <a href="{{ url_for('attendance.index', user=u.id) }}">{{ _('Picagens') }}</a>
+          <a href="{{ url_for('tasks.index', user=u.id) }}">{{ _('Tarefas') }}</a>
+          <a href="{{ url_for('leave.index', user=u.id) }}">{{ _('Férias') }}</a>
+        </div></td>
       </tr>
     {% endfor %}
     </tbody>

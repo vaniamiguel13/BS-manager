@@ -1,8 +1,10 @@
 import csv
 import io
+import math
 from datetime import timedelta
 
-from flask import Blueprint, Response, abort, flash, redirect, render_template, request, url_for
+from flask import Blueprint, Response, abort, redirect, render_template, request, url_for
+from ..i18n import flash, gettext as _
 from flask_login import current_user, login_required
 
 from .. import db
@@ -27,6 +29,13 @@ def _filtered_query():
     return first, following, query.order_by(TaskEntry.date.desc(), TaskEntry.id.desc())
 
 
+def _available_projects():
+    query = db.session.query(TaskEntry.project).distinct()
+    if not current_user.is_admin:
+        query = query.filter(TaskEntry.user_id == current_user.id)
+    return sorted(p for (p,) in query if p)
+
+
 def _get_own_or_admin(task_id):
     task = db.get_or_404(TaskEntry, task_id)
     if task.user_id != current_user.id and not current_user.is_admin:
@@ -39,7 +48,7 @@ def _get_own_or_admin(task_id):
 def index():
     first, following, query = _filtered_query()
     entries = query.all()
-    projects = [p for (p,) in db.session.query(TaskEntry.project).distinct().order_by(TaskEntry.project) if p]
+    projects = _available_projects()
     return render_template(
         "tasks/index.html",
         entries=entries,
@@ -57,32 +66,57 @@ def index():
 @login_required
 def edit(task_id=None):
     task = _get_own_or_admin(task_id) if task_id else None
+    submitted = request.form if request.method == "POST" else None
     if request.method == "POST":
         title = request.form.get("title", "").strip()
-        date = parse_date(request.form.get("date"))
+        task_date = parse_date(request.form.get("date"))
+        raw_date = request.form.get("date", "")
         try:
             hours = float(request.form.get("hours", "0").replace(",", ".") or 0)
-        except ValueError:
-            hours = -1
-        if not title or not date:
-            flash("Indique pelo menos a data e o título da tarefa.", "error")
-        elif not 0 <= hours <= 24:
-            flash("As horas devem estar entre 0 e 24.", "error")
+        except (TypeError, ValueError):
+            hours = math.nan
+        description = request.form.get("description", "").strip()
+        project = request.form.get("project", "").strip()
+        target_user_id = (request.form.get("user_id", type=int) if "user_id" in request.form else (task.user_id if task else current_user.id)) if current_user.is_admin else current_user.id
+        errors = []
+        if not task_date or not 1900 <= task_date.year <= 9998 or not raw_date or raw_date != task_date.isoformat():
+            errors.append("Indique uma data válida para a tarefa.")
+        if not title:
+            errors.append("Indique o título da tarefa.")
+        if not math.isfinite(hours) or not 0 <= hours <= 24:
+            errors.append("As horas devem ser um número finito entre 0 e 24.")
+        if len(description) > 10000:
+            errors.append("A descrição não pode exceder 10000 caracteres.")
+        if len(project) > 120:
+            errors.append("O projeto não pode exceder 120 caracteres.")
+        if len(title) > 200:
+            errors.append("O título não pode exceder 200 caracteres.")
+        if not target_user_id or db.session.get(User, target_user_id) is None:
+            errors.append("Escolha um colaborador válido.")
+        if errors:
+            for message in errors:
+                flash(message, "error")
         else:
             if task is None:
-                task = TaskEntry(user_id=current_user.id)
+                task = TaskEntry(user_id=target_user_id)
                 db.session.add(task)
-            task.date = date
-            task.title = title[:200]
-            task.project = request.form.get("project", "").strip()[:120]
-            task.description = request.form.get("description", "").strip()
+            elif current_user.is_admin:
+                task.user_id = target_user_id
+            task.date = task_date
+            task.title = title
+            task.project = project
+            task.description = description
             task.hours = hours
             db.session.commit()
             flash("Tarefa guardada.", "success")
-            return redirect(url_for("tasks.index", mes=date.strftime("%Y-%m")))
+            return redirect(url_for("tasks.index", mes=task_date.strftime("%Y-%m"), user=task.user_id))
+        projects = _available_projects()
+        return render_template("tasks/edit.html", task=task, projects=projects, default_date=today(), submitted=submitted,
+                               users=User.query.order_by(User.name).all() if current_user.is_admin else []), 400
 
-    projects = [p for (p,) in db.session.query(TaskEntry.project).distinct() if p]
-    return render_template("tasks/edit.html", task=task, projects=sorted(projects), default_date=today())
+    projects = _available_projects()
+    return render_template("tasks/edit.html", task=task, projects=projects, default_date=today(), submitted=submitted,
+                           users=User.query.order_by(User.name).all() if current_user.is_admin else [])
 
 
 @bp.route("/<int:task_id>/apagar", methods=["POST"])
@@ -99,17 +133,22 @@ def delete(task_id):
 @bp.route("/exportar")
 @login_required
 def export():
-    first, _, query = _filtered_query()
+    first, _following, query = _filtered_query()
     out = io.StringIO()
     writer = csv.writer(out, delimiter=";")
-    writer.writerow(["Colaborador", "Data", "Projeto", "Tarefa", "Descrição", "Horas"])
+    writer.writerow([_(label) for label in ["Colaborador", "Data", "Projeto", "Tarefa", "Descrição", "Horas"]])
     for e in query.all():
         writer.writerow([
-            e.user.name, e.date.isoformat(), e.project, e.title, e.description,
+            _csv_text(e.user.name), e.date.isoformat(), _csv_text(e.project), _csv_text(e.title), _csv_text(e.description),
             f"{e.hours:.2f}".replace(".", ","),
         ])
     return Response(
         "﻿" + out.getvalue(),
         mimetype="text/csv",
-        headers={"Content-Disposition": f"attachment; filename=tarefas-{first:%Y-%m}.csv"},
+        headers={"Content-Disposition": f"attachment; filename=tarefas-{first:%Y-%m}.csv", "Cache-Control": "no-store"},
     )
+
+
+def _csv_text(value):
+    value = value or ""
+    return "'" + value if value.lstrip().startswith(("=", "+", "-", "@", "\t", "\r", "\n")) else value

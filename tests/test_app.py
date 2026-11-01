@@ -1,6 +1,7 @@
 from datetime import date, datetime, timedelta
 
 import pytest
+from flask_migrate import upgrade
 
 from app import create_app, db
 from app.holidays import easter, holidays, is_working_day
@@ -8,14 +9,14 @@ from app.models import Event, LeaveRequest, TaskEntry, User, WorkSession
 
 
 @pytest.fixture
-def app(tmp_path):
+def app(database_url):
     app = create_app({
         "TESTING": True,
         "WTF_CSRF_ENABLED": False,
-        "SQLALCHEMY_DATABASE_URI": f"sqlite:///{tmp_path / 'test.db'}",
+        "SQLALCHEMY_DATABASE_URI": database_url,
     })
     with app.app_context():
-        db.create_all()
+        upgrade()
         admin = User(name="Ana Admin", email="admin@ex.pt", is_admin=True, vacation_days=22)
         admin.set_password("password123")
         worker = User(name="Rui Colaborador", email="rui@ex.pt", vacation_days=22)
@@ -92,7 +93,7 @@ def test_admin_manual_session(app, admin):
     with app.app_context():
         rui = User.query.filter_by(email="rui@ex.pt").one()
     resp = admin.post("/picagens/nova", data={
-        "user_id": rui.id, "start": "2026-10-01T09:00", "end": "2026-10-01T13:30", "note": "esqueceu-se",
+        "reason": "Synthetic manual correction", "user_id": rui.id, "start": "2026-10-01T09:00", "end": "2026-10-01T13:30", "note": "esqueceu-se",
     })
     assert resp.status_code == 302
     with app.app_context():
@@ -186,11 +187,11 @@ def test_calendar_events(app, worker):
 
 def test_admin_user_management(app, admin):
     resp = admin.post("/admin/utilizadores/novo", data={
-        "name": "Nova Pessoa", "email": "Nova@Ex.pt", "password": "segredo123", "vacation_days": "25", "active": "1",
+        "name": "Nova Pessoa", "email": "Nova@Ex.pt", "password": "synthetic-password123", "vacation_days": "25", "active": "1",
     })
     assert resp.status_code == 302
     c = app.test_client()
-    assert login(c, "nova@ex.pt", "segredo123").status_code == 302
+    assert login(c, "nova@ex.pt", "synthetic-password123").status_code == 302
     assert c.get("/").status_code == 200
 
     # Admin não se pode despromover a si próprio
@@ -218,14 +219,22 @@ def test_all_pages_render(admin):
 
 
 def test_login_lockout_after_repeated_failures(app):
-    from app.routes import auth
-
-    auth._failures.clear()
+    from app.services.authentication import MAX_FAILURES
+    from app.models import LoginThrottle
     client = app.test_client()
-    for _ in range(auth.MAX_FAILURES):
+    for _ in range(MAX_FAILURES):
         login(client, password="errada")
-    resp = login(client)  # palavra-passe certa, mas bloqueado
-    assert resp.status_code == 429
+    assert login(client).status_code == 429
     assert client.get("/").status_code == 302
-    auth._failures.clear()
+    with app.app_context():
+        LoginThrottle.query.delete()
+        db.session.commit()
     assert login(client).status_code == 302
+
+
+@pytest.mark.parametrize('target', ['//[', '///external.invalid', '/%2fexternal.invalid', '/\\external.invalid'])
+def test_login_rejects_malformed_and_ambiguous_return_urls(app, target):
+    client = app.test_client()
+    response = client.post('/login', query_string={'next': target},
+                           data={'email':'rui@ex.pt','password':'password123'})
+    assert response.status_code == 302 and response.location == '/'

@@ -1,26 +1,26 @@
 {% extends "base.html" %}
 {% from "_macros.html" import csrf %}
-{% block title %}Perfil · {{ company_name }}{% endblock %}
+{% block title %}{{ _('Perfil') }} · Management{% endblock %}
 {% block content %}
-<h1>O meu perfil</h1>
+<h1>{{ _('O meu perfil') }}</h1>
 <div class="grid grid-2">
   <form method="post" class="card">
     {{ csrf() }}
     <input type="hidden" name="action" value="profile">
-    <h2>Dados</h2>
-    <label>Nome <input name="name" value="{{ current_user.name }}" required></label>
-    <label>Email <input value="{{ current_user.email }}" disabled></label>
-    <label>Cor no calendário <input type="color" name="color" value="{{ current_user.color }}"></label>
-    <button class="btn btn-primary">Guardar</button>
+    <h2>{{ _('Dados') }}</h2>
+    <label>{{ _('Nome') }} <input name="name" maxlength="120" autocomplete="name" value="{{ request.form.get('name', current_user.name) if request.form.get('action') == 'profile' else current_user.name }}" required></label>
+    <label>{{ _('Email') }} <input value="{{ current_user.email }}" disabled></label>
+    <label>{{ _('Cor no calendário') }} <input type="color" name="color" value="{{ current_user.color }}"></label>
+    <button class="btn btn-primary">{{ _('Guardar') }}</button>
   </form>
   <form method="post" class="card">
     {{ csrf() }}
     <input type="hidden" name="action" value="password">
-    <h2>Alterar palavra-passe</h2>
-    <label>Palavra-passe atual <input type="password" name="current_password" required autocomplete="current-password"></label>
-    <label>Nova palavra-passe <input type="password" name="new_password" minlength="8" required autocomplete="new-password"></label>
-    <label>Confirmar <input type="password" name="confirm_password" minlength="8" required autocomplete="new-password"></label>
-    <button class="btn btn-primary">Alterar</button>
+    <h2>{{ _('Alterar palavra-passe') }}</h2>
+    <label>{{ _('Palavra-passe atual') }} <input type="password" name="current_password" required autocomplete="current-password"></label>
+    <label>{{ _('Nova palavra-passe') }} <input type="password" name="new_password" minlength="12" maxlength="1024" required autocomplete="new-password"></label>
+    <label>{{ _('Confirmar') }} <input type="password" name="confirm_password" minlength="12" maxlength="1024" required autocomplete="new-password"></label>
+    <button class="btn btn-primary">{{ _('Alterar') }}</button>
   </form>
 </div>
 {% endblock %}

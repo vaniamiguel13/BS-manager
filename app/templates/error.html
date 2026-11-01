@@ -2,7 +2,7 @@
 {% block content %}
 <div class="card form-narrow">
   <h1>{{ code }}</h1>
-  <p>{{ message }}</p>
-  <a class="btn btn-primary" href="{{ url_for('dashboard.index') }}">Voltar ao início</a>
+  <p>{{ _(message) }}</p>
+  <a class="btn btn-primary" href="{{ url_for('dashboard.index') }}">{{ _('Voltar ao início') }}</a>
 </div>
 {% endblock %}

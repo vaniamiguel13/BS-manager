@@ -2,12 +2,13 @@
 
 {% macro month_nav(endpoint, first, prev_month, next_month) %}
 <div class="month-nav">
-  <a class="btn btn-light" href="{{ url_for(endpoint, mes=prev_month, **kwargs) }}">‹</a>
+  <a class="btn btn-light" href="{{ url_for(endpoint, mes=prev_month, **kwargs) }}" aria-label="{{ _('Mês anterior') }}" title="{{ _('Mês anterior') }}">‹</a>
   <strong>{{ first|month_label }}</strong>
-  <a class="btn btn-light" href="{{ url_for(endpoint, mes=next_month, **kwargs) }}">›</a>
+  <a class="btn btn-light" href="{{ url_for(endpoint, mes=next_month, **kwargs) }}" aria-label="{{ _('Mês seguinte') }}" title="{{ _('Mês seguinte') }}">›</a>
 </div>
 {% endmacro %}
 
 {% macro status_badge(status) %}
-<span class="badge badge-{{ status }}">{{ status|capitalize }}</span>
+{% set labels = {'pendente': _('Pendente'), 'aprovado': _('Aprovado'), 'rejeitado': _('Rejeitado'), 'cancelado': _('Cancelado')} %}
+<span class="badge badge-{{ status }}">{{ labels.get(status, status|capitalize) }}</span>
 {% endmacro %}

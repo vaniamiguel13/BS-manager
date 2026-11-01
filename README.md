@@ -1,163 +1,228 @@
 # BS-manager
-Plataforma de Gestão: uma alternativa simples ao Odoo para equipas pequenas, acessível pelo browser (computador ou telemóvel) a partir de qualquer lado.
 
-## Estado do desenvolvimento
+BS-manager is a small internal staff-management prototype. Its initial scope is
+attendance, work logs, leave and absences, the team calendar, and account
+administration. CRM, subscriptions, and accounting are outside this release.
 
-A base de desenvolvimento é a versão Flask de 2026-10-28, no ramo `develop`.
-O âmbito inicial inclui picagens, registos de trabalho, férias/ausências,
-calendário e gestão de utilizadores. A versão anterior com CRM, subscrições e
-contabilidade está fora deste primeiro lançamento.
+## Status and safety
 
-A aplicação ainda é um protótipo. A revisão, os critérios de aceitação e os
-próximos passos estão em [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md).
+The original functional MVP is implemented and verified locally with synthetic
+data: attendance, work logs, leave, calendar and account administration. See the
+[requirements checklist](docs/REQUIREMENTS.md) for behavior and evidence.
+An authorized synthetic preview was deployed behind a separate Cloudflare Access
+policy on 2026-10-30. No real staff records should be entered yet. Live sign-in
+acceptance, company policy sign-off, production placement and independent off-host
+backup ownership remain release gates. Hosted CI has not run. See the
+[remaining-work tracker](docs/TASKS.md) for current implementation and release gaps.
+The [2026-11-01 release validation](docs/RELEASE_READINESS.md) records the latest
+checks and distinguishes local acceptance from the pending demo update.
 
-## Funcionalidades
+The recommended local path is Docker Compose with PostgreSQL. The web container
+uses a restricted database role; only the one-off migration/admin service uses
+the database owner credentials. Normal web workers do not create schemas, run
+migrations, or seed accounts.
 
-| Módulo | O que faz |
-|---|---|
-| **Picagens** | Botão de entrada/saída no ecrã inicial, com notas opcionais (ex.: "teletrabalho"). Histórico mensal com totais por dia e por mês, e exportação para CSV (abre no Excel). Os administradores podem corrigir, acrescentar ou apagar picagens, e cada alteração fica marcada. |
-| **Tarefas** | Registo do trabalho feito: data, projeto/cliente, título, descrição e horas. Filtros por mês, projeto e colaborador, e exportação para CSV. |
-| **Férias e ausências** | Pedidos de férias, faltas, baixa, formação, teletrabalho, etc. Os dias úteis são contados automaticamente, sem fins de semana nem feriados. O saldo anual de férias é controlado, os pedidos sobrepostos são bloqueados, e os administradores aprovam ou rejeitam com uma nota. |
-| **Calendário** | Calendário da equipa com os feriados nacionais (incluindo Páscoa, Sexta-feira Santa e Corpo de Deus), as ausências aprovadas de todos e os eventos partilhados (reuniões, prazos). Os pedidos pendentes só são visíveis para o próprio e para os administradores. |
-| **Utilizadores** | Os administradores criam contas, definem os dias de férias, a cor no calendário e o perfil (colaborador ou administrador), e podem desativar contas. Cada pessoa pode mudar a sua palavra-passe. |
+## Workspace layout and theme
 
-Tecnologia: Python 3.11+ · Flask · SQLAlchemy · SQLite (desenvolvimento) ou PostgreSQL (produção) · FullCalendar.
+The product is labelled **Management**, alongside the original project logo.
+Desktop navigation uses a full-width top bar; smaller screens have a collapsible
+menu. The light/dark button beside PT/EN remembers a browser-local preference and
+uses the system theme before a choice is saved. It is also available before login.
 
-## Experimentar no seu computador
+## Interface language
+
+Choose **PT** or **EN** at the top right, including on the sign-in page. Portuguese
+is the default; the choice is remembered in the current browser. Labels, feedback,
+calendar controls and CSV headings follow that choice. Entered names, notes,
+projects and retained record contents remain in their original language.
+
+## Local Docker setup
+
+Requirements: Docker Engine with the Compose plugin and Python 3 for the setup helper.
+Use a fresh development volume. Existing prototype databases are not automatically
+converted; preserve them separately instead of stamping them at the new revision.
+
+```bash
+python3 scripts/setup-local.py
+docker compose run --build --rm migrate
+docker compose run --rm migrate flask --app wsgi create-admin
+docker compose up -d --wait
+```
+
+What it does: creates a private `.env` with random local secrets (mode `0600`,
+without overwriting an existing file), applies database migrations without
+creating an administrator, prompts for the first administrator with a hidden
+password prompt, and starts the local services. Open <http://localhost:8000>.
+The local port is bound to loopback and uses HTTP for development; it is not a
+public or LAN deployment.
+
+Stop the containers while keeping the local database volume:
+
+```bash
+docker compose down
+```
+
+What it does: removes the Compose containers and network while preserving the
+named PostgreSQL volume and its data.
+
+To deliberately erase the local database volume as well:
+
+```bash
+docker compose down --volumes
+```
+
+What it does: removes the containers and permanently deletes the named local
+PostgreSQL volume, including all records stored in it.
+
+### Applying an application update
+
+Build the release image, apply its migrations once using the owner role, then
+recreate the web container on that image:
+
+```bash
+docker compose build web migrate
+docker compose run --rm migrate flask --app wsgi db upgrade
+docker compose up -d --wait --force-recreate web
+```
+
+What it does: builds the application image, applies pending versioned migrations
+explicitly, and replaces the web container after the database schema is ready.
+Take an approved backup before schema-changing updates when using any data you
+need to preserve. Do not run `db upgrade` in each application worker.
+
+## Local Python and SQLite
+
+For development without Docker, the app defaults to a SQLite database under
+`instance/`. Use a fresh development database; this is not a migration path for
+old prototype tables.
 
 ```bash
 python3 -m venv .venv
-source .venv/bin/activate          # Windows: .venv\Scripts\activate
-pip install -r requirements-dev.txt
-ADMIN_EMAIL=admin@exemplo.pt ADMIN_PASSWORD=mudar123 flask --app wsgi run --debug
+source .venv/bin/activate
+python -m pip install -r requirements-dev.txt
+flask --app wsgi --debug init-db
+flask --app wsgi --debug create-admin
+flask --app wsgi run --debug
 ```
 
-Abra http://localhost:5000 e entre com o email e a palavra-passe acima. O primeiro administrador só é criado se a base de dados estiver vazia. Também o pode criar mais tarde com `flask --app wsgi create-admin`.
+What it does: creates an isolated Python environment, installs development
+dependencies, applies migrations to the local SQLite database, prompts for an
+administrator, and starts Flask's development server at <http://127.0.0.1:5000>.
+Without a configured `SECRET_KEY`, debug mode creates a temporary key; sessions
+will be invalidated when the app restarts. Do not use this server for deployment.
 
-Fora de testes ou do modo debug, `SECRET_KEY` é obrigatória e deve ter pelo
-menos 32 caracteres não vazios, gerados aleatoriamente. A aplicação recusa
-arrancar sem uma chave válida. Para gerar uma chave, use
-`python3 -c "import secrets; print(secrets.token_hex(32))"` e guarde-a fora do Git.
-No modo debug, uma chave temporária é gerada se não existir uma configurada;
-as sessões terminam quando a aplicação reinicia. `serve.py` guarda a chave
-gerada no `.env` para a manter entre reinícios.
+## Attendance timestamps and corrections
 
-Testes: `pytest`
+Attendance instants are stored in UTC and displayed in `APP_TIMEZONE` (default
+`Europe/Lisbon`). Reports split overnight sessions at local midnight and clip
+them to the selected month; CSV rows contain those daily portions and explicit
+UTC offsets. Open sessions use one captured current instant per report.
 
-## Correr num PC do escritório (Linux)
+Administrator corrections require a reason and the displayed record version.
+Annulling a record retains it and its before/after history, while removing it
+from totals. Audit rows reject updates/deletes in the database; this protects
+application operations, not against a database owner or machine administrator.
 
-Para uma equipa pequena basta um PC Linux que esteja sempre ligado. Os dados ficam numa base SQLite em `instance/bs-manager.db`.
+Migration `0002_attendance` upgrades the versioned `0001_initial` schema. It
+interprets existing naive attendance values in the configured `APP_TIMEZONE`,
+converts them to UTC, and records a baseline with the original values and an
+unknown historical actor. Confirm the historical timezone before any data-bearing
+upgrade. Invalid/overlapping intervals and ambiguous or nonexistent DST times
+stop the upgrade for explicit resolution. Unversioned prototype tables require
+separate reconciliation; do not stamp them or guess timestamps.
 
-1. Instale o Python e o Git (Ubuntu/Debian: `sudo apt install python3 python3-venv git`) e clone o repositório.
-2. Crie o ficheiro `.env` com o primeiro administrador:
-   ```bash
-   cp .env.example .env
-   ```
-   Preencha `SECRET_KEY`, `ADMIN_EMAIL` e `ADMIN_PASSWORD`. `DOMAIN` e `POSTGRES_PASSWORD` só são precisos com Docker.
-3. Instale como serviço, para arrancar sempre que o PC liga:
-   ```bash
-   ./instalar-servico.sh
-   ```
-   Se só quiser experimentar, use antes `./iniciar.sh` (para com Ctrl+C).
-4. Os colegas na mesma rede abrem `http://<IP-do-PC>:8000`. O IP aparece nos registos (`journalctl -u bs-manager`) ou com `hostname -I`. Se o PC tiver firewall: `sudo ufw allow 8000/tcp`.
+For repeated DST hours, the correction form requires the earlier or later
+occurrence. Nonexistent local times are rejected. Downgrading this migration
+with attendance records is refused to protect history. A reviewed, tested backup
+restore is required for data-bearing rollback. The local encrypted full-schema
+restore rehearsal passes; the company off-host recovery process is still to be
+configured. These tracking rules do not establish payroll or legal compliance.
 
-Cuidados:
-* O PC não pode suspender. Desative a suspensão automática nas definições de energia.
-* Peça ao responsável de rede um IP fixo para o PC (reserva DHCP no router), para o endereço não mudar.
-* Faça cópias de segurança regulares de `instance/bs-manager.db` (por exemplo, com uma tarefa `cron` que a copia para outro disco ou para a cloud).
+## Leave, calendar and accounts
 
-### Aceder de fora do escritório: Cloudflare Tunnel (recomendado)
+Employees see their own leave details and decision history. Colleagues see only
+approved availability (“Indisponível”); pending requests and sensitive categories
+are visible only to their owner and administrators. Administrators may approve
+their own requests, as selected for this internal tool.
 
-O Cloudflare Tunnel dá um endereço com HTTPS, por exemplo `https://gestao.suaempresa.pt`, sem abrir portas no router. É gratuito, sem limite de utilizadores, e os colegas só precisam do browser.
+Each employee has configurable working weekdays and a default annual allowance
+(initially Monday–Friday and 22 days), with optional allowances for specific years.
+Requests retain their working-week snapshot, exclude configured holidays, reserve
+balance while pending, reject active overlaps and split balance across years.
+Approval rechecks the balance; rejected/cancelled requests release reservations.
+These defaults need company confirmation before official timekeeping use.
 
-**Usar o domínio que já têm:** pode usar um subdomínio (ex.: `gestao.`) do domínio do site. O site não é afetado. A condição é que o **DNS do domínio seja gerido pela Cloudflare**:
+Administrators create/deactivate accounts, change roles and reset passwords.
+Password and access changes revoke existing sessions. Users may change their
+own password; trusted operators have an interactive `reset-password` recovery
+command. The database shares login throttling across workers. See the
+[operations guide](docs/OPERATIONS.md) for recovery and the prepared HTTPS overlay.
 
-* Se o domínio já está na Cloudflare, pode avançar.
-* Se não está, adicione-o em [dash.cloudflare.com](https://dash.cloudflare.com) (plano Free). A Cloudflare importa os registos DNS atuais. Antes de mudar os *nameservers* no registo do domínio (ex.: PTisp, Amen, GoDaddy), **confirme que a lista importada tem todos os registos** do site (`A`, `CNAME`) e, sobretudo, do email (`MX`, `TXT`/SPF, DKIM). Se faltar algum, o site ou o email deixam de funcionar. Compare com o painel atual do domínio ou peça a lista a quem gere o site.
-* Se não puder mexer no DNS do domínio, registe um domínio barato só para isto (ex.: `suaempresa-gestao.pt`) diretamente na Cloudflare.
+Backups use a public age recipient, streaming a PostgreSQL custom dump directly
+into encryption. The optional backup profile never receives the decryption key.
+See [backup/recovery](docs/BACKUP_RECOVERY.md) for setup, failure/freshness checks,
+full-schema restore rehearsal and remaining off-host responsibilities.
 
-**Passos (no PC do escritório, com a plataforma já instalada com `./instalar-servico.sh`):**
-
-1. No painel da Cloudflare abra **Zero Trust → Networks → Tunnels** e escolha **Create a tunnel**, tipo **Cloudflared**, com um nome como `bs-manager`. Os nomes dos menus podem mudar ligeiramente.
-2. No passo de instalação, escolha Debian e copie o **token**: o texto longo depois de `cloudflared service install` no comando que aparece.
-3. Em **Public Hostname**, preencha subdomínio `gestao`, o seu domínio, tipo `HTTP` e URL `localhost:8000`. Guarde.
-4. No PC, corra:
-   ```bash
-   ./instalar-cloudflare-tunnel.sh <TOKEN> https://gestao.suaempresa.pt
-   ```
-   O script instala o `cloudflared` como serviço e configura a plataforma para HTTPS. A plataforma passa a aceitar ligações só através do túnel (`HOST=127.0.0.1`).
-5. Abra `https://gestao.suaempresa.pt`. **Toda a gente, incluindo quem está no escritório, passa a usar este endereço.** O antigo `http://<IP>:8000` deixa de funcionar.
-
-Segurança: o login bloqueia um email durante 15 minutos após 10 tentativas falhadas. Para uma camada extra, como pedir um código enviado por email antes de mostrar a página, configure uma aplicação em **Zero Trust → Access → Applications** para o mesmo endereço.
-
-### Outras opções
-
-* **Tailscale:** VPN privada; cada colega instala a aplicação Tailscale. O plano gratuito é limitado a poucos utilizadores e só para uso não comercial.
-* **Abrir a porta no router:** não recomendado. A aplicação ficaria exposta sem HTTPS.
-
-## Pôr online num servidor (acesso remoto pela internet)
-
-Outra opção é um servidor pequeno (VPS de ~5 €/mês na Hetzner, OVH, DigitalOcean, etc.) com Docker. O `docker-compose.yml` arranca três serviços:
-
-* **web**: a aplicação (gunicorn);
-* **db**: PostgreSQL, com os dados guardados num volume;
-* **caddy**: servidor HTTPS que obtém e renova sozinho o certificado SSL (Let's Encrypt).
-
-Passos:
-
-1. Compre ou use um domínio e crie um registo DNS **A** (ex.: `gestao.suaempresa.pt`) a apontar para o IP do servidor.
-2. No servidor, instale o Docker e clone o repositório.
-3. `cp .env.example .env` e preencha `DOMAIN`, `SECRET_KEY`, `POSTGRES_PASSWORD` e os dados `ADMIN_*`.
-   Para gerar uma chave: `python3 -c "import secrets; print(secrets.token_hex(32))"`
-4. `docker compose up -d --build`
-5. Abra `https://gestao.suaempresa.pt`, entre como administrador e crie as contas dos colegas em **Utilizadores**.
-
-Atualizar para uma nova versão: `git pull && docker compose up -d --build`.
-
-Cópia de segurança da base de dados:
+## Tests
 
 ```bash
-docker compose exec db pg_dump -U bsmanager bsmanager > backup-$(date +%F).sql
+python -m pytest -q
 ```
 
-### Alternativas sem servidor próprio
+What it does: runs the test suite using temporary SQLite databases by default.
+When `TEST_DATABASE_URL` is set, PostgreSQL tests create a unique temporary
+schema and drop only that schema. Point it only at a dedicated, disposable test
+database, never at production or a database containing real staff records.
 
-* **Render / Railway / Fly.io**: criam a aplicação a partir do `Dockerfile` e dão-lhe uma base de dados PostgreSQL. Defina as variáveis `DATABASE_URL`, `SECRET_KEY`, `SESSION_COOKIE_SECURE=1` e `ADMIN_*`. O HTTPS é tratado pela plataforma.
-* **Servidor no escritório**: use o mesmo `docker compose` e abra as portas 80 e 443 no router, ou use um túnel (Cloudflare Tunnel, Tailscale) para não expor portas.
+The CI workflow also checks dependency consistency, shell-script syntax, and
+the Docker Compose initialization, migration, login, and persistence path.
+Run that isolated check locally with:
 
-## Configuração (variáveis de ambiente)
-
-| Variável | Por omissão | Descrição |
-|---|---|---|
-| `SECRET_KEY` | (obrigatória em produção) | Chave para assinar as sessões |
-| `DATABASE_URL` | SQLite em `instance/` | Ex.: `postgresql://user:pass@host/db` |
-| `COMPANY_NAME` | `BS Manager` | Nome no topo da página |
-| `APP_TIMEZONE` | `Europe/Lisbon` | Fuso horário das picagens |
-| `DEFAULT_VACATION_DAYS` | `22` | Dias de férias de cada novo utilizador |
-| `EXTRA_HOLIDAYS` | (vazio) | Feriados municipais em formato `MM-DD`, separados por vírgula (ex.: `06-13`) |
-| `SESSION_COOKIE_SECURE` | `0` | `1` quando servido por HTTPS |
-| `HOST` / `PORT` | `0.0.0.0` / `8000` | Onde o `serve.py` escuta (`127.0.0.1` = só este PC / túnel) |
-| `PUBLIC_URL` | (vazio) | Endereço público, mostrado ao arrancar |
-| `ADMIN_EMAIL` / `ADMIN_PASSWORD` / `ADMIN_NAME` | (vazio) | Primeiro administrador |
-
-## Estrutura
-
-```
-app/
-  __init__.py      # criação da app, configuração, comando create-admin
-  models.py        # User, WorkSession (picagens), TaskEntry, LeaveRequest, Event
-  holidays.py      # feriados portugueses
-  routes/          # auth, dashboard, attendance, tasks, leave, calendar, admin
-  templates/       # páginas HTML (Jinja2)
-  static/style.css
-tests/             # testes automáticos (pytest)
-serve.py           # servidor para correr num PC (usado por iniciar.sh / instalar-servico.sh)
+```bash
+python3 scripts/check-compose.py
 ```
 
-## Ideias para próximas versões
+What it does: builds a uniquely named synthetic test project, verifies migrations,
+HTTP login and persistence across container replacement, then deletes only that
+project's test containers, database volume and image. It preserves the normal
+development stack. This is a persistence check, not an independent backup/restore
+rehearsal. Credentials are outside the build context; local container environment
+values remain visible to anyone with Docker-administrator access.
 
-* Notificações por email quando um pedido de férias é aprovado ou rejeitado
-* Mapa de férias anual por equipa e relatórios de horas extra
-* Gestão de projetos com tarefas atribuídas (kanban)
-* Picagem com geolocalização ou QR code
-* Autenticação com Google/Microsoft 365
+For encrypted full-schema backup/restore acceptance (application Python
+dependencies and Docker required):
+
+```bash
+python scripts/check-backup.py
+```
+
+What it does: creates isolated synthetic source/target databases, encrypts a
+backup, rejects corrupt/wrong-key inputs, restores and verifies application login,
+totals and retained history, then removes only its own test resources.
+
+For local browser acceptance, install Playwright 1.64.1 and its Chromium/WebKit
+browsers in a separate test-tools directory, make the package available through
+`NODE_PATH`, then run:
+
+```bash
+python scripts/check-browser.py
+```
+
+What it does: serves a disposable CSRF-enabled fixture only on loopback and checks
+employee/administrator workflows at desktop/mobile sizes in Chromium and WebKit.
+It rejects external browser requests and keeps screenshots in a temporary folder.
+The CI file contains reproducible dependency installation steps.
+
+## Legacy entry points and test VM
+
+`serve.py`, `iniciar.sh`, and `instalar-servico.sh` are legacy non-Docker helpers.
+They do not apply migrations automatically; with the selected database
+configuration and a valid `SECRET_KEY`, run `flask --app wsgi init-db` before
+starting them. They are not the supported deployment path.
+`instalar-cloudflare-tunnel.sh` is retired and exits without changing services;
+do not pass tunnel credentials as command-line arguments.
+
+The [VM test environment notes](docs/VM_TEST_ENVIRONMENT.md) describe a separate
+synthetic-data validation environment. They do not authorize production hosting
+or establish that application deployment, public access, or backup recovery has
+been approved or verified.

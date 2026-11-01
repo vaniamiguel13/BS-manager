@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% from "_macros.html" import csrf %}
+{% block content %}
+<h1>{{ _('Anular picagem') }}</h1>
+<p>{{ session.user.name }} · {{ session.start|attendance_local|dt }}. {{ _('A anulação preserva o registo e o histórico e exclui a duração dos totais.') }}</p>
+<form method="post" class="card form-narrow">
+  {{ csrf() }}
+  <input type="hidden" name="version" value="{{ request.form.get('version', session.version) }}">
+  <label>{{ _('Motivo') }} <textarea name="reason" required maxlength="500">{{ request.form.get('reason', '') }}</textarea></label>
+  <button class="btn btn-danger">{{ _('Anular picagem') }}</button>
+  <a href="{{ url_for('attendance.index', user=session.user_id) }}">{{ _('Cancelar') }}</a>
+</form>
+{% endblock %}

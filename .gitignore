@@ -5,3 +5,11 @@ venv/
 instance/
 .env
 .pytest_cache/
+
+# Local encrypted archives and backup credentials are never source artifacts.
+backups/
+.backup-secrets/
+*.age
+*identity*.txt
+playwright-report/
+test-results/

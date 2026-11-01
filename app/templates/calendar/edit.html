@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% from "_macros.html" import csrf %}
+{% block title %}{{ _('Editar evento') }} · Management{% endblock %}
+{% block content %}
+<h1>{{ _('Editar evento') }}</h1>
+<p class="muted">{{ _('Horas locais da empresa:') }} {{ config.APP_TIMEZONE }}. {{ _('Criado por') }} {{ event.created_by.name }}.</p>
+<form method="post" class="card form-narrow">
+  {{ csrf() }}
+  {% include "calendar/_fields.html" %}
+  <div class="actions">
+    <button class="btn btn-primary">{{ _('Guardar') }}</button>
+    <a class="btn btn-light" href="{{ url_for('calendar.index') }}">{{ _('Cancelar') }}</a>
+  </div>
+</form>
+{% endblock %}
+{% block scripts %}
+<script>
+const allDay = document.getElementById('all-day');
+const toggle = () => {
+  document.querySelector('.timed').hidden = allDay.checked;
+  document.querySelector('.allday').hidden = !allDay.checked;
+};
+allDay.addEventListener('change', toggle);
+toggle();
+</script>
+{% endblock %}

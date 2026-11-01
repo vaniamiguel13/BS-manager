@@ -1,23 +1,36 @@
 {% extends "base.html" %}
 {% from "_macros.html" import csrf %}
-{% block title %}Picagem · {{ company_name }}{% endblock %}
+{% block title %}{{ _('Picagem') }} · Management{% endblock %}
 {% block content %}
-<h1>{{ 'Editar' if session else 'Nova' }} picagem</h1>
+<h1>{{ _('Editar') if session else _('Nova') }} {{ _('picagem') }}</h1>
 <form method="post" class="card form-narrow">
   {{ csrf() }}
-  {% set selected = session.user_id if session else preselected %}
-  <label>Colaborador
+  {% if session %}<input type="hidden" name="version" value="{{ request.form.get('version', session.version) }}">{% endif %}
+  {% set selected = preselected if preselected is not none else (session.user_id if session else none) %}
+  <label>{{ _('Colaborador') }}
     <select name="user_id" required>
       {% for u in users %}<option value="{{ u.id }}" {{ 'selected' if u.id == selected }}>{{ u.name }}</option>{% endfor %}
     </select>
   </label>
-  <label>Entrada <input type="datetime-local" name="start" required value="{{ session.start.strftime('%Y-%m-%dT%H:%M') if session }}"></label>
-  <label>Saída <input type="datetime-local" name="end" value="{{ session.end.strftime('%Y-%m-%dT%H:%M') if session and session.end }}">
-    <small class="muted">Deixe vazio se ainda estiver a trabalhar.</small></label>
-  <label>Nota <input name="note" maxlength="255" value="{{ session.note if session }}"></label>
+  <label>{{ _('Entrada') }} <input type="datetime-local" step="1" name="start" required value="{{ request.form.get('start', session.start|attendance_input if session else '') }}"></label>
+  <label>{{ _('Saída') }} <input type="datetime-local" step="1" name="end" value="{{ request.form.get('end', session.end|attendance_input if session and session.end else '') }}">
+    <small class="muted">{{ _('Deixe vazio se ainda estiver a trabalhar.') }}</small></label>
+  {% for field, label in [('start', _('Entrada')), ('end', _('Saída'))] %}
+  {% set selected_fold = request.form.get(field ~ '_fold', '') %}
+  <label>{{ _('{label} numa hora repetida (mudança de hora)', label=label) }}
+    <select name="{{ field }}_fold">
+      <option value="" {{ 'selected' if selected_fold == '' }}>{{ _('Confirmar hora ambígua') }}</option>
+      <option value="0" {{ 'selected' if selected_fold == '0' }}>{{ _('Primeira ocorrência') }}</option>
+      <option value="1" {{ 'selected' if selected_fold == '1' }}>{{ _('Segunda ocorrência') }}</option>
+    </select>
+  </label>
+  {% endfor %}
+  <p class="muted">{{ _('Se mantiver a hora apresentada, conserva-se a ocorrência original.') }}</p>
+  <label>{{ _('Motivo da correção') }} <textarea name="reason" required maxlength="500">{{ request.form.get('reason', '') }}</textarea></label>
+  <label>{{ _('Nota') }} <input name="note" maxlength="255" value="{{ request.form.get('note', session.note if session else '') }}"></label>
   <div class="actions">
-    <button class="btn btn-primary">Guardar</button>
-    <a class="btn btn-light" href="{{ url_for('attendance.index', user=selected) }}">Cancelar</a>
+    <button class="btn btn-primary">{{ _('Guardar') }}</button>
+    <a class="btn btn-light" href="{{ url_for('attendance.index', user=selected) }}">{{ _('Cancelar') }}</a>
   </div>
 </form>
 {% endblock %}

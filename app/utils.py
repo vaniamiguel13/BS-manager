@@ -4,6 +4,7 @@ from zoneinfo import ZoneInfo
 
 from flask import abort, current_app, has_app_context
 from flask_login import current_user
+from .i18n import gettext as _
 
 MONTHS = [
     "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
@@ -37,6 +38,8 @@ def parse_month(value):
         first = datetime.strptime(value, "%Y-%m").date().replace(day=1)
     except (TypeError, ValueError):
         first = today().replace(day=1)
+    if not 1900 <= first.year <= 9998:
+        abort(400)
     following = (first + timedelta(days=32)).replace(day=1)
     return first, following
 
@@ -78,9 +81,9 @@ def register_template_helpers(app):
         return {
             "company_name": app.config["COMPANY_NAME"],
             "today": today(),
-            "month_name": lambda m: MONTHS[m - 1],
+            "month_name": lambda m: _(MONTHS[m - 1]),
         }
 
     @app.template_filter("month_label")
     def month_label(d: date):
-        return f"{MONTHS[d.month - 1]} {d.year}"
+        return f"{_(MONTHS[d.month - 1])} {d.year}"

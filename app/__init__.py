@@ -1,12 +1,19 @@
 import os
 import secrets
+from pathlib import Path
+from datetime import timedelta
+from zoneinfo import ZoneInfo
 
 import click
 from flask import Flask
 from flask_login import LoginManager
+from flask_migrate import Migrate, upgrade
 from flask_sqlalchemy import SQLAlchemy
 from flask_wtf.csrf import CSRFProtect
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy.engine import URL
+from sqlalchemy import text
+from sqlalchemy.exc import SQLAlchemyError
+from alembic.script import ScriptDirectory
 from sqlalchemy.orm import DeclarativeBase
 
 
@@ -15,6 +22,7 @@ class Base(DeclarativeBase):
 
 
 db = SQLAlchemy(model_class=Base)
+migrate = Migrate()
 login_manager = LoginManager()
 csrf = CSRFProtect()
 
@@ -26,6 +34,12 @@ def create_app(config_overrides=None):
     database_url = os.environ.get(
         "DATABASE_URL", "sqlite:///" + os.path.join(app.instance_path, "bs-manager.db")
     )
+    if not os.environ.get("DATABASE_URL") and os.environ.get("DATABASE_HOST"):
+        database_url = URL.create(
+            "postgresql+psycopg", username=os.environ["DATABASE_USER"],
+            password=os.environ["DATABASE_PASSWORD"], host=os.environ["DATABASE_HOST"],
+            database=os.environ.get("DATABASE_NAME", "bsmanager"),
+        ).render_as_string(hide_password=False)
     # Usar o driver psycopg 3 também para URLs "postgres://" ou "postgresql://" (Render, Railway, etc.).
     for prefix in ("postgres://", "postgresql://"):
         if database_url.startswith(prefix):
@@ -37,6 +51,10 @@ def create_app(config_overrides=None):
         SESSION_COOKIE_HTTPONLY=True,
         SESSION_COOKIE_SAMESITE="Lax",
         SESSION_COOKIE_SECURE=os.environ.get("SESSION_COOKIE_SECURE", "0") == "1",
+        MAX_CONTENT_LENGTH=128 * 1024,
+        REMEMBER_COOKIE_HTTPONLY=True,
+        REMEMBER_COOKIE_SAMESITE="Lax",
+        REMEMBER_COOKIE_DURATION=timedelta(days=7),
         REMEMBER_COOKIE_SECURE=os.environ.get("SESSION_COOKIE_SECURE", "0") == "1",
         APP_TIMEZONE=os.environ.get("APP_TIMEZONE", "Europe/Lisbon"),
         COMPANY_NAME=os.environ.get("COMPANY_NAME", "BS Manager"),
@@ -57,11 +75,16 @@ def create_app(config_overrides=None):
             "before starting the application."
         )
 
+    ZoneInfo(app.config["APP_TIMEZONE"])
     db.init_app(app)
+    migrate.init_app(app, db, directory=str(Path(app.root_path).parent / "migrations"))
     csrf.init_app(app)
+    from . import i18n
+    i18n.init_app(app)
     login_manager.init_app(app)
     login_manager.login_view = "auth.login"
     login_manager.login_message = "Inicie sessão para continuar."
+    login_manager.localize_callback = i18n.gettext
     login_manager.login_message_category = "info"
 
     from . import models  # noqa: F401
@@ -75,11 +98,33 @@ def create_app(config_overrides=None):
     register_template_helpers(app)
     _register_error_handlers(app)
 
-    with app.app_context():
-        db.create_all()
-        _bootstrap_admin(app)
-
     _register_cli(app)
+
+    @app.after_request
+    def response_security(response):
+        response.headers['X-Content-Type-Options'] = 'nosniff'
+        response.headers['X-Frame-Options'] = 'DENY'
+        response.headers['Referrer-Policy'] = 'same-origin'
+        response.headers['Permissions-Policy'] = 'camera=(), microphone=(), geolocation=()'
+        response.headers['Cache-Control'] = 'no-store'
+        # Inline template scripts/styles remain in the prototype UI; external
+        # calendar assets are served locally. No third-party connections required.
+        response.headers['Content-Security-Policy'] = "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; connect-src 'self'; object-src 'none'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+        if app.config['SESSION_COOKIE_SECURE']:
+            response.headers['Strict-Transport-Security'] = 'max-age=31536000'
+        return response
+
+    @app.get("/health/ready")
+    def readiness():
+        try:
+            with db.engine.connect() as connection:
+                current = set(connection.execute(text("SELECT version_num FROM alembic_version")).scalars())
+            expected = set(ScriptDirectory(str(Path(app.root_path).parent / "migrations")).get_heads())
+            ready = current == expected
+        except SQLAlchemyError:
+            ready = False
+        return {"status": "ok" if ready else "not-ready"}, 200 if ready else 503, {"Cache-Control": "no-store"}
+
     return app
 
 
@@ -89,23 +134,20 @@ def _bootstrap_admin(app):
 
     email = os.environ.get("ADMIN_EMAIL")
     password = os.environ.get("ADMIN_PASSWORD")
-    if not email or not password or db.session.query(User.id).first():
+    if not email and not password:
+        return
+    if not email or not email.strip() or not password or len(password) < 12:
+        raise click.ClickException("Set both ADMIN_EMAIL and an ADMIN_PASSWORD of at least 12 characters, or leave both empty.")
+    if db.session.query(User.id).first():
         return
     admin = User(
-        name=os.environ.get("ADMIN_NAME", "Administrador"),
-        email=email.strip().lower(),
-        is_admin=True,
-        vacation_days=app.config["DEFAULT_VACATION_DAYS"],
+        name=os.environ.get("ADMIN_NAME", "Administrador"), email=email.strip().lower(),
+        is_admin=True, vacation_days=app.config["DEFAULT_VACATION_DAYS"],
     )
     admin.set_password(password)
     db.session.add(admin)
-    try:
-        db.session.commit()
-    except IntegrityError:
-        # Outro processo (worker) criou-o ao mesmo tempo.
-        db.session.rollback()
-        return
-    app.logger.info("Administrador inicial criado: %s", admin.email)
+    db.session.commit()
+    app.logger.info("Initial administrator created.")
 
 
 def _register_error_handlers(app):
@@ -125,6 +167,33 @@ def _register_error_handlers(app):
 def _register_cli(app):
     from .models import User
 
+    @app.cli.command("init-db")
+    def init_db():
+        """Apply migrations and optionally create the first administrator from ADMIN_* settings."""
+        upgrade()
+        _bootstrap_admin(app)
+        click.echo("Database initialized at the latest migration.")
+
+    @app.cli.command("reset-password")
+    @click.option("--email", prompt="Email")
+    @click.password_option()
+    def reset_password(email, password):
+        """Operator recovery: reset an existing account and revoke all sessions."""
+        if not 12 <= len(password) <= 1024:
+            raise click.ClickException('Use a password of 12–1024 characters.')
+        user = User.query.filter_by(email=email.strip().lower()).first()
+        if user is None:
+            raise click.ClickException('Account not found.')
+        user.set_password(password)
+        from .models import LoginThrottle
+        import hashlib
+        bucket = db.session.get(LoginThrottle, hashlib.sha256(user.email.encode()).hexdigest())
+        if bucket:
+            from .attendance_time import utc_now
+            bucket.failures, bucket.blocked_until, bucket.window_start = 0, None, utc_now()
+        db.session.commit()
+        click.echo('Password reset; existing sessions revoked. Account activation unchanged.')
+
     @app.cli.command("create-admin")
     @click.option("--name", prompt="Nome")
     @click.option("--email", prompt="Email")
@@ -132,6 +201,8 @@ def _register_cli(app):
     def create_admin(name, email, password):
         """Cria (ou promove) um utilizador administrador."""
         email = email.strip().lower()
+        if not name.strip() or len(name.strip()) > 120 or '@' not in email or len(email) > 255 or not 12 <= len(password) <= 1024:
+            raise click.ClickException('Provide a valid name/email and a password of 12–1024 characters.')
         user = User.query.filter_by(email=email).first()
         if user is None:
             user = User(name=name, email=email, vacation_days=app.config["DEFAULT_VACATION_DAYS"])

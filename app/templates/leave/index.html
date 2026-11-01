@@ -1,87 +1,106 @@
 {% extends "base.html" %}
 {% from "_macros.html" import csrf, status_badge %}
-{% block title %}Férias e ausências · {{ company_name }}{% endblock %}
+{% from "_icons.html" import icon %}
+{% block title %}{{ _('Férias e ausências') }} · Management{% endblock %}
 {% block content %}
-<h1>Férias e ausências</h1>
-
-<div class="grid grid-3 stats">
-  <div class="card stat"><span class="muted">Direito em {{ year }}</span><strong>{{ current_user.vacation_days }} dias</strong></div>
-  <div class="card stat"><span class="muted">Gozados / aprovados</span><strong>{{ used_approved }} dias</strong></div>
-  <div class="card stat"><span class="muted">Disponíveis (inclui pendentes)</span><strong>{{ current_user.vacation_days - used_total }} dias</strong></div>
+<div class="page-intro leave-intro">
+  <div><h1>{{ _('Férias e ausências') }}</h1></div>
+  <a class="btn btn-primary" href="#leave-request">{{ icon('plus') }} {{ _('Novo pedido') }}</a>
 </div>
+<form method="get" class="filters leave-filters">
+  <label>{{ _('Ano') }} <input type="number" name="ano" min="1900" max="9998" value="{{ year }}"></label>
+  {% if current_user.is_admin %}<label>{{ _('Colaborador') }} <select name="user">{% for u in users %}<option value="{{ u.id }}" {{ 'selected' if u.id == user.id }}>{{ u.name }}</option>{% endfor %}</select></label>{% endif %}
+  <button class="btn btn-light">{{ _('Filtrar') }}</button>
+</form>
+
+{% set entitlement = user.entitlement(year) %}
+{% set available = entitlement - used_total %}
+{% set reserved = used_total - used_approved %}
+<section class="card leave-balance" aria-labelledby="balance-title">
+  <div class="balance-overview">
+    <span class="balance-symbol">{{ icon('leave') }}</span>
+    <div><p class="card-context">{{ user.name }} · {{ year }}</p><h2 id="balance-title">{{ _('Saldo de férias') }}</h2><p class="muted small">{{ _('Os pedidos pendentes já reservam dias do saldo.') }}</p></div>
+    <div class="balance-available"><strong>{{ available }}</strong><span>{{ _('dia disponível') if available == 1 else _('dias disponíveis') }}</span></div>
+  </div>
+  <dl class="balance-breakdown">
+    <div><dt>{{ _('Direito anual') }}</dt><dd>{{ entitlement }} <span>{{ _('dia') if entitlement == 1 else _('dias') }}</span></dd></div>
+    <div><dt>{{ _('Aprovados') }}</dt><dd>{{ used_approved }} <span>{{ _('dia') if used_approved == 1 else _('dias') }}</span></dd></div>
+    <div><dt>{{ _('A aguardar aprovação') }}</dt><dd>{{ reserved }} <span>{{ _('dia') if reserved == 1 else _('dias') }}</span></dd></div>
+  </dl>
+</section>
 
 {% if current_user.is_admin %}
-<section class="card">
-  <h2>Pedidos por aprovar ({{ pending|length }})</h2>
+<section class="card leave-review" aria-labelledby="review-title">
+  <div class="card-header"><div><h2 id="review-title">{{ _('Pedidos por aprovar') }} <span class="count-pill">{{ pending|length }}</span></h2></div>{{ icon('users') }}</div>
   {% if pending %}
-  <table>
-    <thead><tr><th>Colaborador</th><th>Tipo</th><th>Período</th><th>Dias úteis</th><th>Motivo</th><th>Decisão</th></tr></thead>
-    <tbody>
+  <div class="review-list">
     {% for r in pending %}
-      <tr>
-        <td>{{ r.user.name }}</td>
-        <td>{{ r.kind_label }}</td>
-        <td>{{ r.start_date|d }} – {{ r.end_date|d }}</td>
-        <td>{{ r.working_days() }}{% if r.kind == 'ferias' %} <span class="muted">(saldo {{ r.user.vacation_balance(r.start_date.year) }})</span>{% endif %}</td>
-        <td>{{ r.reason }}</td>
-        <td>
-          <form method="post" action="{{ url_for('leave.review', leave_id=r.id) }}" class="review-form">
-            {{ csrf() }}
-            <input name="review_note" placeholder="Nota (opcional)" maxlength="500">
-            <button name="decision" value="aprovar" class="btn btn-success btn-sm">Aprovar</button>
-            <button name="decision" value="rejeitar" class="btn btn-danger btn-sm">Rejeitar</button>
-          </form>
-        </td>
-      </tr>
+    {% set request_days = r.working_days() %}
+    <article class="review-item">
+      <div class="request-heading"><div><strong>{{ r.user.name }}</strong><p>{{ _(r.kind_label) }} · {{ r.start_date|d }} – {{ r.end_date|d }}</p></div><span class="request-days">{{ request_days }} {{ _('dia útil') if request_days == 1 else _('dias úteis') }}</span></div>
+      {% if r.reason %}<p class="request-note">{{ r.reason }}</p>{% endif %}
+      {% if r.kind == 'ferias' %}<p class="muted small">{{ _('Saldo disponível em {year}: {balance} dias, com este pedido já reservado.', year=r.start_date.year, balance=r.user.vacation_balance(r.start_date.year)) }}</p>{% endif %}
+      <form method="post" action="{{ url_for('leave.review', leave_id=r.id) }}" class="review-form">
+        {{ csrf() }}<input type="hidden" name="version" value="{{ r.version }}">
+        <label class="visually-hidden" for="review-note-{{ r.id }}">{{ _('Nota da decisão para {name}', name=r.user.name) }}</label>
+        <input id="review-note-{{ r.id }}" name="review_note" placeholder="{{ _('Nota da decisão (opcional)') }}" maxlength="500">
+        <button name="decision" value="aprovar" class="btn btn-success btn-sm">{{ _('Aprovar') }}</button>
+        <button name="decision" value="rejeitar" class="btn btn-danger btn-sm">{{ _('Rejeitar') }}</button>
+      </form>
+    </article>
     {% endfor %}
-    </tbody>
-  </table>
-  {% else %}
-    <p class="muted">Não há pedidos pendentes.</p>
-  {% endif %}
+  </div>
+  {% else %}<p class="empty-inline">{{ icon('check') }} {{ _('Tudo em dia. Não há pedidos pendentes.') }}</p>{% endif %}
 </section>
 {% endif %}
 
-<div class="grid grid-2-1">
-  <section class="card">
-    <h2>Os meus pedidos</h2>
+<div class="leave-layout">
+  <form method="post" action="{{ url_for('leave.create') }}" class="card leave-request" id="leave-request" data-preview-url="{{ url_for('leave.preview') }}">
+    {{ csrf() }}
+    <div class="card-header"><div><h2>{{ _('Novo pedido') }}</h2></div><span class="section-icon">{{ icon('calendar') }}</span></div>
+    <p class="form-help">{{ _('Para {name}.', name=current_user.name) }}{% if user.id != current_user.id %} {{ _('Estás a consultar o saldo de {name}, mas este pedido é para ti.', name=user.name) }}{% endif %}</p>
+    <label>{{ _('Tipo') }} <select name="kind">{% for k, label in kinds.items() %}<option value="{{ k }}" {{ 'selected' if request.form.get('kind') == k }}>{{ _(label) }}</option>{% endfor %}</select></label>
+    <div class="grid grid-2 leave-dates">
+      <label>{{ _('De') }} <input type="date" name="start_date" required aria-describedby="leave-dates-help" value="{{ request.form.get('start_date', '') }}"></label>
+      <label>{{ _('Até') }} <span class="optional">{{ _('opcional') }}</span><input type="date" name="end_date" aria-describedby="leave-dates-help" value="{{ request.form.get('end_date', '') }}"></label>
+    </div>
+    <p id="leave-dates-help" class="form-help">{{ _('Para um só dia, preenche apenas a data de início.') }}</p>
+    <div class="leave-estimate" id="leave-estimate" role="status" aria-live="polite" aria-atomic="true">
+      <span class="estimate-label">{{ _('Resumo do pedido') }}</span>
+      <strong id="estimate-days">{{ _('Escolhe as datas') }}</strong>
+      <p id="estimate-detail">{{ _('Vamos contar os teus dias de trabalho e mostrar o efeito no saldo.') }}</p>
+    </div>
+    <label>{{ _('Motivo / observações') }} <span class="optional">{{ _('opcional') }}</span><textarea name="reason" rows="3" maxlength="500" aria-describedby="leave-privacy">{{ request.form.get('reason', '') }}</textarea></label>
+    <p class="form-help" id="leave-privacy">{{ _('Só tu e os administradores veem estes detalhes. A equipa vê apenas a tua indisponibilidade.') }}</p>
+    <button class="btn btn-primary btn-block">{{ _('Submeter pedido') }}</button>
+    <p class="form-help request-disclaimer">{{ _('A estimativa não reserva dias. O saldo e as datas são verificados de novo ao submeter.') }}</p>
+    <noscript><p class="form-help">{{ _('O resumo automático precisa de JavaScript. Podes submeter o pedido; as datas e o saldo serão verificados.') }}</p></noscript>
+  </form>
+
+  <section class="card leave-history" aria-labelledby="history-title">
+    <div class="card-header"><div><p class="card-context">{{ user.name }} · {{ year }}</p><h2 id="history-title">{{ _('Pedidos de ausência') }}</h2></div><span class="count-pill">{{ requests|length }}</span></div>
     {% if requests %}
-    <table>
-      <thead><tr><th>Tipo</th><th>Período</th><th>Dias úteis</th><th>Estado</th><th></th></tr></thead>
-      <tbody>
+    <div class="request-list">
       {% for r in requests %}
-        <tr>
-          <td>{{ r.kind_label }}</td>
-          <td>{{ r.start_date|d }} – {{ r.end_date|d }}</td>
-          <td>{{ r.working_days() }}</td>
-          <td>{{ status_badge(r.status) }}{% if r.review_note %}<div class="desc">{{ r.review_note }}</div>{% endif %}</td>
-          <td>
-            {% if r.status in ('pendente', 'aprovado') and (r.start_date > today or r.status == 'pendente') %}
-            <form method="post" action="{{ url_for('leave.cancel', leave_id=r.id) }}" onsubmit="return confirm('Cancelar este pedido?')">
-              {{ csrf() }}<button class="link danger">Cancelar</button>
-            </form>
-            {% endif %}
-          </td>
-        </tr>
+      {% set request_days = r.working_days() %}
+      <article class="request-item">
+        <div class="request-heading"><div><strong>{{ _(r.kind_label) }}</strong><p>{{ r.start_date|d }} – {{ r.end_date|d }}</p></div>{{ status_badge(r.status) }}</div>
+        <div class="request-meta"><span>{{ request_days }} {{ _('dia útil') if request_days == 1 else _('dias úteis') }}</span><div class="request-actions">
+          <a href="{{ url_for('leave.history', leave_id=r.id) }}">{{ _('Histórico') }}<span class="visually-hidden"> {{ _('de {kind} de {date}', kind=_(r.kind_label), date=r.start_date|d) }}</span></a>
+          {% if r.status in ('pendente', 'aprovado') and (r.start_date > today or r.status == 'pendente' or current_user.is_admin) %}
+          <form method="post" action="{{ url_for('leave.cancel', leave_id=r.id) }}" onsubmit="return confirm({{ _('Cancelar este pedido?')|tojson|forceescape }})">
+            {{ csrf() }}<input type="hidden" name="version" value="{{ r.version }}"><button class="link danger">{{ _('Cancelar') }}<span class="visually-hidden"> {{ _('pedido de {date}', date=r.start_date|d) }}</span></button>
+          </form>
+          {% endif %}
+        </div></div>
+        {% if r.review_note %}<p class="request-note">{{ r.review_note }}</p>{% endif %}
+      </article>
       {% endfor %}
-      </tbody>
-    </table>
+    </div>
     {% else %}
-      <p class="muted">Ainda não fez nenhum pedido.</p>
+    <div class="empty-state"><span class="balance-symbol">{{ icon('leave') }}</span><h3>{{ _('Sem pedidos neste ano') }}</h3><p>{{ _('Os pedidos e as decisões aparecem aqui. Para planear uma ausência, começa pelas datas.') }}</p><a href="#leave-request">{{ _('Criar um pedido') }} {{ icon('arrow') }}</a></div>
     {% endif %}
   </section>
-
-  <form method="post" action="{{ url_for('leave.create') }}" class="card">
-    {{ csrf() }}
-    <h2>Novo pedido</h2>
-    <label>Tipo
-      <select name="kind">{% for k, label in kinds.items() %}<option value="{{ k }}">{{ label }}</option>{% endfor %}</select>
-    </label>
-    <label>De <input type="date" name="start_date" required></label>
-    <label>Até <input type="date" name="end_date"></label>
-    <label>Motivo / observações <textarea name="reason" rows="3" maxlength="500"></textarea></label>
-    <p class="muted small">Fins de semana e feriados nacionais não contam como dias de férias.</p>
-    <button class="btn btn-primary">Submeter pedido</button>
-  </form>
 </div>
 {% endblock %}
+{% block scripts %}<script src="{{ url_for('static', filename='leave-preview.js') }}" defer></script>{% endblock %}

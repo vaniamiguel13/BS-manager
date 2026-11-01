@@ -1,18 +1,19 @@
 from pathlib import Path
 
 import pytest
+from flask_migrate import upgrade
 
 from app import create_app
 
 
 @pytest.fixture
-def config(tmp_path, monkeypatch):
+def config(database_url, monkeypatch):
     for name in ("SECRET_KEY", "ADMIN_EMAIL", "ADMIN_PASSWORD", "FLASK_DEBUG"):
         monkeypatch.delenv(name, raising=False)
     return {
         "DEBUG": False,
         "TESTING": False,
-        "SQLALCHEMY_DATABASE_URI": f"sqlite:///{tmp_path / 'config.db'}",
+        "SQLALCHEMY_DATABASE_URI": database_url,
     }
 
 
@@ -54,6 +55,7 @@ def test_public_default_cannot_sign_an_admin_session(config):
 
     app = create_app({**config, "TESTING": True})
     with app.app_context():
+        upgrade()
         admin = User(name="Synthetic admin", email="admin@example.invalid", is_admin=True)
         admin.set_password("synthetic-test-password")
         db.session.add(admin)
@@ -87,3 +89,21 @@ def test_documented_debug_cli_starts_without_configured_secret(config, monkeypat
     assert result.exit_code == 0, result.output
     assert captured["app"].debug
     assert len(captured["app"].secret_key) >= 32
+
+
+def test_database_components_encode_password_without_url_interpolation(monkeypatch):
+    from sqlalchemy.engine import make_url
+    monkeypatch.setenv('DATABASE_HOST', 'db')
+    monkeypatch.setenv('DATABASE_USER', 'bsmanager')
+    monkeypatch.setenv('DATABASE_PASSWORD', 'synthetic:p@ss/%?#')
+    app = create_app({'TESTING': True})
+    url = make_url(app.config['SQLALCHEMY_DATABASE_URI'])
+    assert url.password == 'synthetic:p@ss/%?#'
+    assert url.host == 'db' and url.username == 'bsmanager'
+
+
+def test_explicit_database_url_takes_precedence_over_components(monkeypatch):
+    monkeypatch.setenv('DATABASE_HOST', 'ignored')
+    monkeypatch.setenv('DATABASE_URL', 'sqlite:///:memory:')
+    app = create_app({'TESTING': True})
+    assert app.config['SQLALCHEMY_DATABASE_URI'] == 'sqlite:///:memory:'

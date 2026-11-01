@@ -1,0 +1,14 @@
+# Prepared HTTPS-tunnel overlay; applying it to a host requires deployment approval.
+# The host connector forwards only to the loopback web port from the base file.
+services:
+  web:
+    environment:
+      SESSION_COOKIE_SECURE: "1"
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=64m
+    mem_limit: 512m
+    pids_limit: 256
+  migrate:
+    environment:
+      SESSION_COOKIE_SECURE: "1"

@@ -1,0 +1,26 @@
+[
+  {
+    "file": "fullcalendar-6.1.15.min.js",
+    "package": "fullcalendar",
+    "version": "6.1.15",
+    "source": "https://registry.npmjs.org/fullcalendar/-/fullcalendar-6.1.15.tgz",
+    "sha256": "673b42b6c0032ca6d414afd7ea73989c9af479e9665765f77612c307f24ae9f3",
+    "packageIntegrity": "sha512-CFnh1yswjRh9puJVDk8VGwTlyZ6eXxr4qLI7QCA0+bozyAm+BluP1US5mOtgk0gEq23nQxGSNDoBvAraz++saQ=="
+  },
+  {
+    "file": "fullcalendar-LICENSE.md",
+    "package": "fullcalendar",
+    "version": "6.1.15",
+    "source": "https://registry.npmjs.org/fullcalendar/-/fullcalendar-6.1.15.tgz",
+    "sha256": "4c0b0dae26c99e3b11be70b990a703be4deb75e21884104582e0e217786d3209",
+    "packageIntegrity": "sha512-CFnh1yswjRh9puJVDk8VGwTlyZ6eXxr4qLI7QCA0+bozyAm+BluP1US5mOtgk0gEq23nQxGSNDoBvAraz++saQ=="
+  },
+  {
+    "file": "fullcalendar-pt-6.1.15.min.js",
+    "package": "@fullcalendar/core",
+    "version": "6.1.15",
+    "source": "https://registry.npmjs.org/@fullcalendar/core/-/core-6.1.15.tgz",
+    "sha256": "b9c030a2734452168f86ecfa4fc8104ea90582cfccca3cf7575afa6de2c6633b",
+    "packageIntegrity": "sha512-BuX7o6ALpLb84cMw1FCB9/cSgF4JbVO894cjJZ6kP74jzbUZNjtwffwRdA+Id8rrLjT30d/7TrkW90k4zbXB5Q=="
+  }
+]

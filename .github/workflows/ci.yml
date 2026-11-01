@@ -1,0 +1,111 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  sqlite:
+    name: SQLite / Python ${{ matrix.python-version }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.12", "3.13"]
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Set up Python
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+      - name: Install development dependencies
+        run: python -m pip install -r requirements-dev.txt
+      - name: Check installed dependencies
+        run: python -m pip check
+      - name: Run test suite
+        run: python -m pytest -q
+      - name: Check shell script syntax
+        if: matrix.python-version == '3.13'
+        run: bash -n instalar-cloudflare-tunnel.sh iniciar.sh instalar-servico.sh
+
+  postgres:
+    name: PostgreSQL 17 / Python 3.13
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_DB: bs_manager_test
+          POSTGRES_USER: bs_manager_test
+          POSTGRES_PASSWORD: ci-only-password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U bs_manager_test -d bs_manager_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      TEST_DATABASE_URL: postgresql+psycopg://bs_manager_test:ci-only-password@localhost:5432/bs_manager_test
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Set up Python
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.13"
+          cache: pip
+      - name: Install development dependencies
+        run: python -m pip install -r requirements-dev.txt
+      - name: Check installed dependencies
+        run: python -m pip check
+      - name: Run test suite
+        run: python -m pytest -q
+
+  docker-integration:
+    name: Docker Compose integration
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Set up Python
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.13"
+      - name: Install application dependencies
+        run: python -m pip install -r requirements.txt
+      - name: Verify Compose initialization, migration, HTTP, login, and persistence
+        run: python3 scripts/check-compose.py
+      - name: Verify encrypted full-schema backup and isolated restore
+        run: python3 scripts/check-backup.py
+
+  browser:
+    name: Desktop and mobile browser acceptance
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Set up Python
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.13"
+      - name: Install application and browser test dependencies
+        run: |
+          python -m pip install -r requirements.txt
+          npm install --prefix "$RUNNER_TEMP/bs-browser" --no-save playwright@1.64.1
+          "$RUNNER_TEMP/bs-browser/node_modules/.bin/playwright" install --with-deps chromium webkit
+      - name: Exercise synthetic desktop/mobile workflows
+        run: |
+          export NODE_PATH="$RUNNER_TEMP/bs-browser/node_modules"
+          export BS_BROWSER_ARTIFACTS="$RUNNER_TEMP/bs-browser-artifacts"
+          python scripts/check-browser.py
+          python scripts/check-browser.py --responsive

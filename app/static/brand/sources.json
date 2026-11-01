@@ -1,0 +1,28 @@
+[
+  {
+    "file": "logo.svg",
+    "source": "https://breastscreeningai.eu/assets/images/logo/logo-bs-main.svg",
+    "sha256": "72c8ec1b329e5133c75259733245e2f8c6e79cc25a988d8a2b630d3e368922e4"
+  },
+  {
+    "file": "symbol.svg",
+    "source": "https://breastscreeningai.eu/assets/images/favicon.svg",
+    "sha256": "c8de85fc0b5568eba13d1bcd808f1050dcf7fef7d06a17958a83d5fbdd1e5dff"
+  },
+  {
+    "file": "bricolage-grotesque.woff2",
+    "source": "https://fonts.gstatic.com/s/bricolagegrotesque/v9/3y9K6as8bTXq_nANBjzKo3IeZx8z6up5BeSl9D4dj_x9PpZBMlGIInHWVyNJ.woff2",
+    "family": "Bricolage Grotesque",
+    "license": "bricolage-grotesque-OFL.txt",
+    "licenseSource": "https://raw.githubusercontent.com/google/fonts/main/ofl/bricolagegrotesque/OFL.txt",
+    "sha256": "85f55a58a31e61a2e19e8bb25fed503181bf2a6b4cab76c589992cfaac377447"
+  },
+  {
+    "file": "manrope.woff2",
+    "source": "https://fonts.gstatic.com/s/manrope/v23/xn7gYHE41ni1AdIRggexSvfedN4.woff2",
+    "family": "Manrope",
+    "license": "manrope-OFL.txt",
+    "licenseSource": "https://raw.githubusercontent.com/google/fonts/main/ofl/manrope/OFL.txt",
+    "sha256": "8bd97e6bbbc1f602a8f791530eed1064c9a357d5731bbc76e3fc587fb068728f"
+  }
+]
