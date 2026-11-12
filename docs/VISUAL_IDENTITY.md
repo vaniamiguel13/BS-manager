@@ -118,3 +118,39 @@ Chromium/WebKit checks pass at 320, 390, 700, 760, 761, 768, 1024, 1240, 1241, 1
 width, no page overflow, navbar non-overlap, common gutters, report baselines,
 keyboard menus and theme persistence. Representative screenshots were inspected.
 This is browser-engine evidence; physical-device testing is not claimed.
+
+## Type scale, mobile dock and record layouts — 2026-11-12
+
+Body text is now 15 px and the smallest interface text 12 px. Hover styles apply
+only to hover-capable fine pointers; controls have a press state, 16 px inputs on
+coarse pointers and suitable `inputmode`/`autocomplete` hints. The viewport covers
+the safe areas and `theme-color` follows the header in each theme.
+
+At 760 px and below the navigation is a floating translucent dock above the
+bottom safe area, with five destinations and the current one filled. It replaces
+the two-column menu. The top bar keeps the logo, “Management”, PT/EN, theme and
+the account menu, which also holds Users for administrators. The dock is ordinary
+links, so it works without JavaScript. It moves aside while a text field is
+focused, while a form control is pressed and while a dialog is open, and becomes
+opaque when transparency is reduced or `backdrop-filter` is unsupported. Desktop
+and tablet keep the full-width navbar. A leaf dot marks Picagens while clocked in.
+
+Attendance and work-log tables render as day-grouped cards at 900 px and below instead
+of scrolling sideways. Attendance lists show `HH:MM`; the full timestamp stays in
+the title attribute, the history page and CSV. Month navigation uses icon buttons
+with a current-month link and a summary row. Dialogs open as bottom sheets on
+phones. Leave balances gain a segmented bar beside the unchanged figures, weekday
+schedules are chips, and audit histories are lists of dated change cards.
+
+Home-screen icons (180, 192, 512 and maskable 512 px) are rendered from the
+unmodified `symbol.svg` on the forest colour and recorded in `brand/sources.json`.
+The web manifest declares standalone display. No service worker or offline mode
+exists, because pages are authenticated and served `no-store`.
+
+Verified on 2026-11-12 with local synthetic data: `scripts/check-browser.py` and
+`scripts/check-browser.py --responsive` pass in Chromium and WebKit, covering
+320–1920 px, PT/EN, both roles, both themes, dock position, label clipping and
+content clearance. Screenshots at 390 and 1440 px were inspected in both themes.
+This is browser-engine evidence. Touch feel, translucency on hardware, safe areas,
+input zoom and installed standalone launch on a physical phone are not verified,
+and nothing here is deployed.

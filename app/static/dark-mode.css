@@ -41,8 +41,8 @@ html[data-theme="dark"] .account-dropdown {
 }
 html[data-theme="dark"] .account-dropdown a,
 html[data-theme="dark"] .account-dropdown button { color: var(--text); }
-html[data-theme="dark"] .account-dropdown a:hover,
-html[data-theme="dark"] .account-dropdown button:hover { background: #2c3c35; }
+@media (hover: hover) and (pointer: fine) { html[data-theme="dark"] .account-dropdown a:hover,
+html[data-theme="dark"] .account-dropdown button:hover { background: #2c3c35; } }
 
 html[data-theme="dark"] .card,
 html[data-theme="dark"] .account-dropdown,
@@ -51,7 +51,7 @@ html[data-theme="dark"] .stat-blue { background: #202d40; border-color: #344861;
 html[data-theme="dark"] .stat-mint { background: #20352b; border-color: #365443; }
 html[data-theme="dark"] .stat-pink { background: #382935; border-color: #594052; }
 html[data-theme="dark"] .stat-label { color: #c4d5cd; }
-html[data-theme="dark"] .link-card:hover { border-color: #9b78a0; }
+@media (hover: hover) and (pointer: fine) { html[data-theme="dark"] .link-card:hover { border-color: #9b78a0; } }
 html[data-theme="dark"] .heading-dot { color: #94d7b1; }
 html[data-theme="dark"] .intro-calendar { background: #202d28; border-color: #40574b; }
 
@@ -89,16 +89,16 @@ html[data-theme="dark"] .btn-success {
   border-color: #286e4e;
   color: #fff;
 }
-html[data-theme="dark"] .btn-primary:hover,
-html[data-theme="dark"] .btn-success:hover { background: #347f5c; border-color: #347f5c; }
+@media (hover: hover) and (pointer: fine) { html[data-theme="dark"] .btn-primary:hover,
+html[data-theme="dark"] .btn-success:hover { background: #347f5c; border-color: #347f5c; } }
 html[data-theme="dark"] .btn-danger { background: #a73d58; border-color: #a73d58; color: #fff; }
-html[data-theme="dark"] .btn-danger:hover { background: #bd4c68; border-color: #bd4c68; }
+@media (hover: hover) and (pointer: fine) { html[data-theme="dark"] .btn-danger:hover { background: #bd4c68; border-color: #bd4c68; } }
 html[data-theme="dark"] .btn-light {
   background: #26332e;
   border-color: #46594f;
   color: var(--text);
 }
-html[data-theme="dark"] .btn-light:hover { background: #31423a; border-color: #668271; }
+@media (hover: hover) and (pointer: fine) { html[data-theme="dark"] .btn-light:hover { background: #31423a; border-color: #668271; } }
 html[data-theme="dark"] button.link { color: var(--primary); }
 html[data-theme="dark"] button.link.danger,
 html[data-theme="dark"] .danger { color: var(--danger); }
@@ -106,9 +106,9 @@ html[data-theme="dark"] .danger { color: var(--danger); }
 /* Keep the primary clock panel forest green, with its own bright controls. */
 html[data-theme="dark"] .clock { background: var(--forest); border-color: var(--forest); }
 html[data-theme="dark"] .clock .btn-success { background: #bfe6cd; border-color: #bfe6cd; color: #173f38; }
-html[data-theme="dark"] .clock .btn-success:hover { background: #d5f1df; border-color: #d5f1df; }
+@media (hover: hover) and (pointer: fine) { html[data-theme="dark"] .clock .btn-success:hover { background: #d5f1df; border-color: #d5f1df; } }
 html[data-theme="dark"] .clock .btn-danger { background: var(--blush); border-color: var(--blush); color: #643752; }
-html[data-theme="dark"] .clock .btn-danger:hover { background: #f9cbed; border-color: #f9cbed; }
+@media (hover: hover) and (pointer: fine) { html[data-theme="dark"] .clock .btn-danger:hover { background: #f9cbed; border-color: #f9cbed; } }
 html[data-theme="dark"] .today-work ul.plain li { border-color: #34443d; }
 html[data-theme="dark"] .time-value { background: #293c32; color: #c6e6d3; }
 html[data-theme="dark"] .section-icon { background: #3c2d3a; color: #e6c8dd; }
@@ -116,7 +116,7 @@ html[data-theme="dark"] .section-icon { background: #3c2d3a; color: #e6c8dd; }
 html[data-theme="dark"] th,
 html[data-theme="dark"] td { border-color: #35463f; }
 html[data-theme="dark"] th { color: #b4c6bd; }
-html[data-theme="dark"] tbody tr:hover { background: #24312b; }
+@media (hover: hover) and (pointer: fine) { html[data-theme="dark"] tbody tr:hover { background: #24312b; } }
 html[data-theme="dark"] tr.subtotal td { background: #25352d; }
 html[data-theme="dark"] tr.inactive { color: #a7b4ad; background: #202a25; }
 html[data-theme="dark"] .tag { background: #25354a; border-color: #3b5270; color: #c5d9fa; }
@@ -179,6 +179,38 @@ html[data-theme="dark"] .count-pill { background: #2c393e; color: #d0dcdf; }
 html[data-theme="dark"] .request-note { background: #222e2a; }
 html[data-theme="dark"] .request-days { color: #bddbc9; }
 
-html[data-theme="dark"] .fc .fc-list-event:hover td { background: #293a31; }
+@media (hover: hover) and (pointer: fine) { html[data-theme="dark"] .fc .fc-list-event:hover td { background: #293a31; } }
 
 html[data-theme="dark"] .fc .fc-day-other .fc-daygrid-day-top { opacity: 1; }
+
+/* Tokens for components that derive their colours instead of overriding rules. */
+html[data-theme="dark"] {
+  --surface-2: #202b26;
+  --accent-soft: #20352b;
+  --ring: #9be2bc;
+  --shadow-1: 0 1px 2px #0000002e, 0 6px 18px #00000033;
+  --shadow-2: 0 14px 40px #000000a6;
+  --glass: #1d2a25ad;
+  --glass-edge: #ffffff24;
+  --glass-ink: #d5e3dc;
+  --dock-active: #bfe5ce;
+  --dock-active-ink: #173f38;
+  --bar: #3f5c50;
+  --bar-today: #bfe5ce;
+}
+html[data-theme="dark"] .account-dropdown a[aria-current="page"] { background: #2c3c35; }
+@media (max-width: 760px) {
+  html[data-theme="dark"] .workspace-header nav { box-shadow: 0 16px 40px #000000a6, 0 2px 6px #00000066, inset 0 1px 0 #ffffff29, inset 0 -1px 0 #00000040; }
+  html[data-theme="dark"] .workspace-header nav::before { background: linear-gradient(180deg, #ffffff1f 0%, #ffffff00 45%); }
+  html[data-theme="dark"] .nav-live { border-color: #1d2a25; }
+}
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  html[data-theme="dark"] { --glass: #1d2a25f5; }
+}
+@media (prefers-reduced-transparency: reduce) {
+  html[data-theme="dark"] { --glass: #1d2a25; }
+}
+html[data-theme="dark"] .balance-bar span { background: #3a5246; }
+html[data-theme="dark"] .balance-bar .is-approved { background: #8fd3aa; }
+html[data-theme="dark"] .balance-key.is-approved { background: #8fd3aa; }
+html[data-theme="dark"] .balance-bar .is-pending, html[data-theme="dark"] .balance-key.is-pending { background: #e0b25a; }

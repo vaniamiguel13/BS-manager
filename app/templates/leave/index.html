@@ -8,7 +8,7 @@
   <a class="btn btn-primary" href="#leave-request">{{ icon('plus') }} {{ _('Novo pedido') }}</a>
 </div>
 <form method="get" class="filters leave-filters">
-  <label>{{ _('Ano') }} <input type="number" name="ano" min="1900" max="9998" value="{{ year }}"></label>
+  <label>{{ _('Ano') }} <input type="number" name="ano" inputmode="numeric" min="1900" max="9998" value="{{ year }}"></label>
   {% if current_user.is_admin %}<label>{{ _('Colaborador') }} <select name="user">{% for u in users %}<option value="{{ u.id }}" {{ 'selected' if u.id == user.id }}>{{ u.name }}</option>{% endfor %}</select></label>{% endif %}
   <button class="btn btn-light">{{ _('Filtrar') }}</button>
 </form>
@@ -22,10 +22,11 @@
     <div><p class="card-context">{{ user.name }} · {{ year }}</p><h2 id="balance-title">{{ _('Saldo de férias') }}</h2><p class="muted small">{{ _('Os pedidos pendentes já reservam dias do saldo.') }}</p></div>
     <div class="balance-available"><strong>{{ available }}</strong><span>{{ _('dia disponível') if available == 1 else _('dias disponíveis') }}</span></div>
   </div>
+  {% if entitlement > 0 %}<div class="balance-bar" aria-hidden="true"><span class="is-approved" style="flex-grow: {{ used_approved }}"></span><span class="is-pending" style="flex-grow: {{ reserved }}"></span><span style="flex-grow: {{ [available, 0]|max }}"></span></div>{% endif %}
   <dl class="balance-breakdown">
     <div><dt>{{ _('Direito anual') }}</dt><dd>{{ entitlement }} <span>{{ _('dia') if entitlement == 1 else _('dias') }}</span></dd></div>
-    <div><dt>{{ _('Aprovados') }}</dt><dd>{{ used_approved }} <span>{{ _('dia') if used_approved == 1 else _('dias') }}</span></dd></div>
-    <div><dt>{{ _('A aguardar aprovação') }}</dt><dd>{{ reserved }} <span>{{ _('dia') if reserved == 1 else _('dias') }}</span></dd></div>
+    <div><dt><i class="balance-key is-approved"></i>{{ _('Aprovados') }}</dt><dd>{{ used_approved }} <span>{{ _('dia') if used_approved == 1 else _('dias') }}</span></dd></div>
+    <div><dt><i class="balance-key is-pending"></i>{{ _('A aguardar aprovação') }}</dt><dd>{{ reserved }} <span>{{ _('dia') if reserved == 1 else _('dias') }}</span></dd></div>
   </dl>
 </section>
 

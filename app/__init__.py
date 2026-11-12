@@ -1,3 +1,4 @@
+import mimetypes
 import os
 import secrets
 from pathlib import Path
@@ -25,6 +26,9 @@ db = SQLAlchemy(model_class=Base)
 migrate = Migrate()
 login_manager = LoginManager()
 csrf = CSRFProtect()
+
+
+mimetypes.add_type('application/manifest+json', '.webmanifest')
 
 
 def create_app(config_overrides=None):

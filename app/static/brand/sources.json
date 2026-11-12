@@ -24,5 +24,29 @@
     "license": "manrope-OFL.txt",
     "licenseSource": "https://raw.githubusercontent.com/google/fonts/main/ofl/manrope/OFL.txt",
     "sha256": "8bd97e6bbbc1f602a8f791530eed1064c9a357d5731bbc76e3fc587fb068728f"
+  },
+  {
+    "file": "icon-180.png",
+    "source": "symbol.svg",
+    "rendering": "Unmodified symbol centred on #173f38 at 62% of the canvas",
+    "sha256": "3702658d4226b2a2f8b8158458b0b0cc5c0d19894a23f0d4f56ef787e71bbb4d"
+  },
+  {
+    "file": "icon-192.png",
+    "source": "symbol.svg",
+    "rendering": "Unmodified symbol centred on #173f38 at 62% of the canvas",
+    "sha256": "e32e2e87b2a89839cda7377289128c3caaa4a171e75532aca536959ee2a0fe3a"
+  },
+  {
+    "file": "icon-512.png",
+    "source": "symbol.svg",
+    "rendering": "Unmodified symbol centred on #173f38 at 62% of the canvas",
+    "sha256": "0a10d0a3867deb65bc22149229ca48c2909618ba05a356645e38ba6b22008dfe"
+  },
+  {
+    "file": "icon-maskable-512.png",
+    "source": "symbol.svg",
+    "rendering": "Unmodified symbol centred on #173f38 at 50% of the canvas, inside the maskable safe zone",
+    "sha256": "77ddef46e14513ff33112efc628b0df68a0d7c5a13c537358df09bd911995c9d"
   }
 ]

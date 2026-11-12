@@ -13,8 +13,8 @@
     <p class="muted login-intro">{{ _('Introduza o seu email e palavra-passe.') }}</p>
     <form method="post">
       {{ csrf() }}
-      <label>{{ _('Email') }} <input type="email" name="email" required autocomplete="username" placeholder="{{ _('nome@empresa.pt') }}" value="{{ request.form.get('email', '') }}"></label>
-      <label>{{ _('Palavra-passe') }} <input type="password" name="password" required autocomplete="current-password"></label>
+      <label>{{ _('Email') }} <input type="email" name="email" required autocomplete="username" autocapitalize="none" spellcheck="false" enterkeyhint="next" placeholder="{{ _('nome@empresa.pt') }}" value="{{ request.form.get('email', '') }}"></label>
+      <label>{{ _('Palavra-passe') }} <input type="password" name="password" required autocomplete="current-password" enterkeyhint="go"></label>
       <label class="check"><input type="checkbox" name="remember" value="1" {{ 'checked' if request.form.get('remember') }}> {{ _('Manter sessão iniciada') }}</label>
       <button class="btn btn-primary btn-block">{{ _('Entrar') }}</button>
     </form>

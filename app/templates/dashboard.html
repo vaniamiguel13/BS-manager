@@ -5,8 +5,8 @@
 <div class="page-intro dashboard-intro"><div><h1>{{ _('Olá, {name}', name=current_user.name.split()[0]) }}<span class="heading-dot">.</span></h1></div><a class="intro-calendar" aria-label="{{ _('Ver calendário') }}" href="{{ url_for('calendar.index') }}">{{ icon('calendar') }}<span>{{ _('Ver calendário') }}</span>{{ icon('arrow') }}</a></div>
 
 <div class="grid grid-4 stats">
-  <div class="card stat stat-blue"><span class="stat-label">{{ icon('clock') }}{{ _('Horas hoje') }}</span><strong>{{ worked_today|hours }}</strong></div>
-  <div class="card stat"><span class="stat-label">{{ icon('tasks') }}{{ _('Esta semana') }}</span><strong>{{ worked_week|hours }}</strong></div>
+  <div class="card stat stat-blue"><span class="stat-label">{{ icon('clock') }}{{ _('Horas hoje') }}</span><strong{% if open_session %} data-live="{{ worked_today.total_seconds()|int }}"{% endif %}>{{ worked_today|hours }}</strong></div>
+  <div class="card stat"><span class="stat-label">{{ icon('tasks') }}{{ _('Esta semana') }}</span><strong{% if open_session %} data-live="{{ worked_week.total_seconds()|int }}"{% endif %}>{{ worked_week|hours }}</strong></div>
   <div class="card stat stat-mint"><span class="stat-label">{{ icon('leave') }}{{ _('Férias disponíveis · {year}', year=today.year) }}</span><strong>{{ balance }} {{ _('dias') }}</strong></div>
   {% if current_user.is_admin %}
   <a class="card stat stat-pink link-card" href="{{ url_for('leave.index') }}"><span class="stat-label">{{ icon('users') }}{{ _('Pedidos por aprovar') }}</span><strong>{{ pending_reviews }}</strong></a>
@@ -20,7 +20,8 @@
     <div class="clock-heading"><span class="clock-icon">{{ icon('clock') }}</span><a href="{{ url_for('attendance.index') }}">{{ _('Ver picagens') }} {{ icon('arrow') }}</a></div>
     <h2>{{ _('Picagem') }}</h2>
     {% if open_session %}
-      <p class="status working">● {{ _('A trabalhar desde as {time}', time=open_session.start|attendance_local|t) }}
+      <p class="clock-elapsed"><strong data-live="{{ open_session.duration.total_seconds()|int }}" data-live-format="hms">{{ open_session.duration|hours }}</strong></p>
+      <p class="status working"><span class="live-dot" aria-hidden="true"></span>{{ _('A trabalhar desde as {time}', time=open_session.start|attendance_local|t) }}
         {% if (open_session.start|attendance_local).date() != today %}{{ _('de {date}', date=open_session.start|attendance_local|d) }}{% endif %}</p>
       <form method="post" action="{{ url_for('attendance.clock_out') }}">
         {{ csrf() }}
@@ -58,24 +59,58 @@
     {% else %}
       <p class="muted">{{ _('Ainda não registou tarefas hoje.') }}</p>
     {% endif %}
+    <form class="quick-task" method="post" action="{{ url_for('tasks.edit') }}" aria-label="{{ _('Registo rápido de tarefa') }}">
+      {{ csrf() }}
+      <input type="hidden" name="date" value="{{ day.isoformat() }}"><input type="hidden" name="next" value="{{ url_for('dashboard.index') }}">
+      <label class="visually-hidden" for="quick-title">{{ _('Tarefa') }}</label><input id="quick-title" class="quick-title" name="title" required maxlength="200" placeholder="{{ _('O que fez?') }}" enterkeyhint="done">
+      <label class="visually-hidden" for="quick-hours">{{ _('Horas') }}</label><input id="quick-hours" name="hours" type="number" inputmode="decimal" min="0" max="24" step="any" placeholder="{{ _('Horas') }}">
+      <label class="visually-hidden" for="quick-project">{{ _('Projeto') }}</label><input id="quick-project" name="project" list="quick-projects" maxlength="120" placeholder="{{ _('Projeto (opcional)') }}">
+      <datalist id="quick-projects">{% for p in projects %}<option value="{{ p }}">{% endfor %}</datalist>
+      <button class="btn btn-primary">{{ _('Adicionar') }}</button>
+    </form>
     <div class="today-work-total"><span>{{ _('Total registado') }}</span><strong>{{ today_tasks|map(attribute='hours')|sum|hours }}</strong></div>
   </section>
 </div>
 
+{% macro absence(l) %}
+  <li class="absence-item">
+    <span class="user-avatar" aria-hidden="true">{{ l.user.name[:1]|upper }}<span style="background: {{ l.user.color }}"></span></span>
+    <div class="absence-who"><strong>{{ l.user.name }}</strong><span>{{ _(l.kind_label) if current_user.is_admin or l.user_id == current_user.id else _('Indisponível') }}</span></div>
+    <div class="absence-when">
+      {% set wait = (l.start_date - day).days %}
+      <strong>{% if wait <= 0 %}{{ _('Até {date}', date=l.end_date.strftime('%d/%m')) }}{% elif wait == 1 %}{{ _('Amanhã') }}{% else %}{{ _('Em {n} dias', n=wait) }}{% endif %}</strong>
+      <span>{{ l.start_date.strftime('%d/%m') }}{% if l.end_date != l.start_date %} – {{ l.end_date.strftime('%d/%m') }}{% endif %}</span>
+    </div>
+  </li>
+{% endmacro %}
+<div class="grid grid-2 dashboard-team">
+<section class="card week-card">
+  <div class="card-header"><div><h2>{{ _('Horas por dia') }}</h2></div><span class="muted week-range">{{ week[0].date.strftime('%d/%m') }} – {{ week[6].date.strftime('%d/%m') }}</span></div>
+  <ol class="week-chart">
+    {% for item in week %}
+    <li{% if item.is_today %} class="is-today" aria-current="date"{% endif %}>
+      <span class="week-value">{{ item.duration|hours if item.duration else '–' }}</span>
+      <span class="week-bar" aria-hidden="true"><span style="height: {{ item.percent }}%"></span></span>
+      <span class="week-day">{{ _(item.label) }}</span>
+    </li>
+    {% endfor %}
+  </ol>
+</section>
+
 <section class="card upcoming-team">
   <div class="card-header"><div><h2>{{ _('Ausências nos próximos 30 dias') }}</h2></div><span class="section-icon">{{ icon('leave') }}</span></div>
-  {% if upcoming %}
-    <table>
-      <thead><tr><th>{{ _('Colaborador') }}</th><th>{{ _('Tipo') }}</th><th>{{ _('De') }}</th><th>{{ _('Até') }}</th></tr></thead>
-      <tbody>
-      {% for l in upcoming %}
-        <tr><td><span class="dot" style="background: {{ l.user.color }}"></span>{{ l.user.name }}</td>
-          <td>{{ _(l.kind_label) if current_user.is_admin or l.user_id == current_user.id else _('Indisponível') }}</td><td>{{ l.start_date|d }}</td><td>{{ l.end_date|d }}</td></tr>
-      {% endfor %}
-      </tbody>
-    </table>
-  {% else %}
+  {% if out_today %}
+    <h3 class="list-label">{{ _('Fora hoje') }}</h3>
+    <ul class="plain absence-list">{% for l in out_today %}{{ absence(l) }}{% endfor %}</ul>
+  {% endif %}
+  {% if out_soon %}
+    <h3 class="list-label">{{ _('A seguir') }}</h3>
+    <ul class="plain absence-list">{% for l in out_soon %}{{ absence(l) }}{% endfor %}</ul>
+  {% endif %}
+  {% if not out_today and not out_soon %}
     <p class="muted">{{ _('Ninguém ausente nos próximos 30 dias.') }}</p>
   {% endif %}
 </section>
+</div>
 {% endblock %}
+{% block scripts %}<script src="{{ url_for('static', filename='dashboard.js') }}" defer></script>{% endblock %}

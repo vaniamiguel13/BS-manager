@@ -1,10 +1,12 @@
 {% macro csrf() %}<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">{% endmacro %}
 
-{% macro month_nav(endpoint, first, prev_month, next_month) %}
+{% from "_icons.html" import icon %}
+{% macro month_nav(endpoint, first, prev_month, next_month, current=none) %}
 <div class="month-nav">
-  <a class="btn btn-light" href="{{ url_for(endpoint, mes=prev_month, **kwargs) }}" aria-label="{{ _('Mês anterior') }}" title="{{ _('Mês anterior') }}">‹</a>
+  <a class="btn btn-light btn-icon" href="{{ url_for(endpoint, mes=prev_month, **kwargs) }}" aria-label="{{ _('Mês anterior') }}" title="{{ _('Mês anterior') }}">{{ icon('prev') }}</a>
   <strong>{{ first|month_label }}</strong>
-  <a class="btn btn-light" href="{{ url_for(endpoint, mes=next_month, **kwargs) }}" aria-label="{{ _('Mês seguinte') }}" title="{{ _('Mês seguinte') }}">›</a>
+  <a class="btn btn-light btn-icon" href="{{ url_for(endpoint, mes=next_month, **kwargs) }}" aria-label="{{ _('Mês seguinte') }}" title="{{ _('Mês seguinte') }}">{{ icon('next') }}</a>
+  {% if current and current.strftime('%Y-%m') != first.strftime('%Y-%m') %}<a class="btn btn-light month-current" href="{{ url_for(endpoint, **kwargs) }}">{{ _('Mês atual') }}</a>{% endif %}
 </div>
 {% endmacro %}
 

@@ -12,6 +12,9 @@ MONTHS = [
 ]
 
 
+WEEKDAYS = ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"]
+
+
 def now():
     """Hora local (sem tzinfo) no fuso horário da empresa, independente do fuso do servidor."""
     tz = current_app.config["APP_TIMEZONE"] if has_app_context() else "Europe/Lisbon"
@@ -74,6 +77,7 @@ def register_template_helpers(app):
     app.jinja_env.filters["hours"] = format_hours
     app.jinja_env.filters["d"] = lambda v: v.strftime("%d/%m/%Y") if v else ""
     app.jinja_env.filters["dt"] = lambda v: v.strftime("%d/%m/%Y %H:%M") if v else ""
+    app.jinja_env.filters["weekday"] = lambda v: _(WEEKDAYS[v.weekday()]) if v else ""
     app.jinja_env.filters["t"] = lambda v: v.strftime("%H:%M") if v else ""
 
     @app.context_processor
@@ -81,6 +85,7 @@ def register_template_helpers(app):
         return {
             "company_name": app.config["COMPANY_NAME"],
             "today": today(),
+            "clocked_in": current_user.is_authenticated and current_user.open_session() is not None,
             "month_name": lambda m: _(MONTHS[m - 1]),
         }
 

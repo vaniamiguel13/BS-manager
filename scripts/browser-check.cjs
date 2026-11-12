@@ -45,7 +45,7 @@ async function run(engine, name, width, height) {
     await page.getByRole('button',{name:'Português',exact:true}).click();
     await login(page,'worker');
     await screenshot(page,name+'-'+width+'-dashboard');
-    const privateAbsence=page.locator('tbody tr').filter({hasText:'Synthetic availability'});
+    const privateAbsence=page.locator('.absence-item').filter({hasText:'Synthetic availability'});
     await privateAbsence.waitFor();
     assert((await privateAbsence.innerText()).includes('Indisponível'), 'Employee dashboard must show availability only');
     assert(!(await privateAbsence.innerText()).includes('Baixa médica'), 'Employee dashboard must not show private leave category');
@@ -124,11 +124,10 @@ async function run(engine, name, width, height) {
     await page.locator('#detail-delete button').click();
     await page.getByText('Evento apagado.',{exact:true}).waitFor();
 
-    if (await page.locator('label[for=nav-toggle]').isVisible()) await page.locator('label[for=nav-toggle]').click();
     await page.locator('.account-menu summary').click();
     await page.locator('form[action="/logout"] button').click();
     await login(page,'admin');
-    const adminAbsence=page.locator('tbody tr').filter({hasText:'Synthetic availability'});
+    const adminAbsence=page.locator('.absence-item').filter({hasText:'Synthetic availability'});
     await adminAbsence.waitFor();
     assert((await adminAbsence.innerText()).includes('Baixa médica'), 'Administrator dashboard should show the leave category');
     await page.goto(base+'/admin/utilizadores');
@@ -208,7 +207,6 @@ async function run(engine, name, width, height) {
       await fallback.getByRole('button',{name:'Submit request',exact:true}).click();
       await fallback.getByText('Request submitted',{exact:false}).waitFor();
       assert(!(await fallback.locator('.theme-switch').isVisible()));
-      await fallback.locator('label[for=nav-toggle]').click();
       await fallback.locator('.account-menu summary').click();
       await fallback.getByRole('link',{name:'My profile',exact:true}).click();
       await fallback.getByRole('heading',{name:'My profile',exact:true}).waitFor();

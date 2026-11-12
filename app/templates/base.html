@@ -2,10 +2,15 @@
 <html lang="{{ html_language }}">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
   <meta name="theme-color" content="#173f38">
   <title>{% block title %}Management{% endblock %}</title>
   <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='brand/symbol.svg') }}">
+  <link rel="apple-touch-icon" href="{{ url_for('static', filename='brand/icon-180.png') }}">
+  <link rel="manifest" href="{{ url_for('static', filename='manifest.webmanifest') }}" crossorigin="use-credentials">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Management">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <script>
   (() => {
     let theme;
@@ -13,6 +18,10 @@
     if (theme !== 'light' && theme !== 'dark') theme = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
     document.documentElement.dataset.theme = theme;
     document.documentElement.style.colorScheme = theme;
+    const chrome = {{ ({'light': '#173f38', 'dark': '#173f38'} if current_user.is_authenticated else {'light': '#eaf0ef', 'dark': '#111a17'})|tojson }};
+    document.querySelector('meta[name="theme-color"]').content = chrome[theme];
+    document.documentElement.dataset.chromeLight = chrome.light;
+    document.documentElement.dataset.chromeDark = chrome.dark;
   })();
   </script>
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
@@ -34,7 +43,6 @@
 {% if current_user.is_authenticated %}
 {% set ep = request.endpoint or '' %}
 {% set sections = [('dashboard','home','Início','dashboard.index'),('attendance','clock','Picagens','attendance.index'),('tasks','tasks','Tarefas','tasks.index'),('leave','leave','Férias','leave.index'),('calendar','calendar','Calendário','calendar.index')] %}
-<input type="checkbox" id="nav-toggle" class="nav-toggle" tabindex="-1" aria-label="{{ _('Abrir menu de navegação') }}" aria-controls="workspace-nav">
 <header class="workspace-header">
   <a class="brand" href="{{ url_for('dashboard.index') }}" aria-label="{{ _('Management — início') }}">
     <img src="{{ url_for('static', filename='brand/logo.svg') }}" alt="BreastScreening-AI" width="92" height="40">
@@ -42,9 +50,9 @@
   </a>
   <nav id="workspace-nav" aria-label="{{ _('Navegação principal') }}">
     {% for prefix, glyph, label, endpoint in sections %}
-    <a href="{{ url_for(endpoint) }}" class="nav-item {{ 'active' if ep.startswith(prefix) }}" {% if ep.startswith(prefix) %}aria-current="page"{% endif %}>{{ icon(glyph) }}<span>{{ _('Página inicial') if prefix == 'dashboard' else _(label) }}</span></a>
+    <a href="{{ url_for(endpoint) }}" class="nav-item {{ 'active' if ep.startswith(prefix) }}" {% if ep.startswith(prefix) %}aria-current="page"{% endif %}><span class="nav-glyph">{{ icon(glyph) }}{% if prefix == 'attendance' and clocked_in %}<span class="nav-live" title="{{ _('A trabalhar') }}"></span>{% endif %}</span>{% if prefix == 'dashboard' %}<span class="nav-wide">{{ _('Página inicial') }}</span><span class="nav-short" aria-hidden="true">{{ _('Início') if language == 'pt' else _('Página inicial') }}</span>{% else %}<span>{{ _(label) }}</span>{% endif %}{% if prefix == 'attendance' and clocked_in %}<span class="visually-hidden"> · {{ _('A trabalhar') }}</span>{% endif %}</a>
     {% endfor %}
-    {% if current_user.is_admin %}<a href="{{ url_for('admin.users') }}" class="nav-item {{ 'active' if ep.startswith('admin') }}" {% if ep.startswith('admin') %}aria-current="page"{% endif %}>{{ icon('users') }}<span>{{ _('Utilizadores') }}</span></a>{% endif %}
+    {% if current_user.is_admin %}<a href="{{ url_for('admin.users') }}" class="nav-item nav-item-admin {{ 'active' if ep.startswith('admin') }}" {% if ep.startswith('admin') %}aria-current="page"{% endif %}>{{ icon('users') }}<span>{{ _('Utilizadores') }}</span></a>{% endif %}
   </nav>
   <div class="header-tools">
     {{ language_switch() }}
@@ -53,11 +61,11 @@
       <summary aria-label="{{ _('Conta de {name}', name=current_user.name) }}"><span class="avatar" aria-hidden="true">{{ current_user.name[:1]|upper }}</span><span class="account-copy">{{ current_user.name }}</span>{{ icon('chevron') }}</summary>
       <div class="account-dropdown">
         <div class="account-identity"><strong>{{ current_user.name }}</strong><span>{{ _('Administrador') if current_user.is_admin else _('Colaborador') }}</span></div>
-        <a href="{{ url_for('auth.profile') }}" {% if ep == 'auth.profile' %}aria-current="page"{% endif %}>{{ _('O meu perfil') }}</a>
+        <a href="{{ url_for('auth.profile') }}" {% if ep == 'auth.profile' %}aria-current="page"{% endif %}>{{ icon('user') }}{{ _('O meu perfil') }}</a>
+        {% if current_user.is_admin %}<a class="account-admin" href="{{ url_for('admin.users') }}" {% if ep.startswith('admin') %}aria-current="page"{% endif %}>{{ icon('users') }}{{ _('Utilizadores') }}</a>{% endif %}
         <form method="post" action="{{ url_for('auth.logout') }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button>{{ icon('logout') }}{{ _('Terminar sessão') }}</button></form>
       </div>
     </details>
-    <label for="nav-toggle" class="nav-toggle-label" role="button" tabindex="0" aria-controls="workspace-nav" aria-expanded="false" aria-label="{{ _('Abrir ou fechar menu') }}" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();document.getElementById('nav-toggle').click()}">{{ icon('menu') }}</label>
   </div>
 </header>
 {% endif %}
@@ -76,27 +84,13 @@
 {% if current_user.is_authenticated %}
 <script>
 const accountMenu = document.querySelector('.account-menu');
-const navigationToggle = document.getElementById('nav-toggle');
-const navigationButton = document.querySelector('label[for="nav-toggle"]');
-function closeNavigation() {
-  navigationToggle.checked = false;
-  navigationButton.setAttribute('aria-expanded', 'false');
-}
-navigationToggle.addEventListener('change', () => {
-  navigationButton.setAttribute('aria-expanded', String(navigationToggle.checked));
-});
 document.addEventListener('click', event => {
   if (!accountMenu.contains(event.target)) accountMenu.open = false;
-  if (event.target !== navigationToggle && !document.querySelector('.workspace-header').contains(event.target)) closeNavigation();
 });
 document.addEventListener('keydown', event => {
-  if (event.key !== 'Escape') return;
-  if (accountMenu.open) {
+  if (event.key === 'Escape' && accountMenu.open) {
     accountMenu.open = false;
     accountMenu.querySelector('summary').focus();
-  } else if (navigationToggle.checked) {
-    closeNavigation();
-    navigationButton.focus();
   }
 });
 </script>

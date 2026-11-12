@@ -4,7 +4,7 @@ import math
 from datetime import timedelta
 
 from flask import Blueprint, Response, abort, redirect, render_template, request, url_for
-from ..i18n import flash, gettext as _
+from ..i18n import flash, gettext as _, local_target
 from flask_login import current_user, login_required
 
 from .. import db
@@ -49,9 +49,15 @@ def index():
     first, following, query = _filtered_query()
     entries = query.all()
     projects = _available_projects()
+    days, per_project = {}, {}
+    for entry in entries:
+        days.setdefault(entry.date, []).append(entry)
+        per_project[entry.project or ""] = per_project.get(entry.project or "", 0) + entry.hours
     return render_template(
         "tasks/index.html",
         entries=entries,
+        days=days,
+        by_project=sorted(per_project.items(), key=lambda item: (-item[1], item[0])),
         total=sum(e.hours for e in entries),
         first=first,
         prev_month=(first - timedelta(days=1)).strftime("%Y-%m"),
@@ -109,13 +115,16 @@ def edit(task_id=None):
             task.hours = hours
             db.session.commit()
             flash("Tarefa guardada.", "success")
-            return redirect(url_for("tasks.index", mes=task_date.strftime("%Y-%m"), user=task.user_id))
+            listing = url_for("tasks.index", mes=task_date.strftime("%Y-%m"), user=task.user_id)
+            return redirect(local_target(request.form.get("next"), listing))
         projects = _available_projects()
         return render_template("tasks/edit.html", task=task, projects=projects, default_date=today(), submitted=submitted,
                                users=User.query.order_by(User.name).all() if current_user.is_admin else []), 400
 
     projects = _available_projects()
+    source_id = request.args.get("de", type=int) if task is None else None
     return render_template("tasks/edit.html", task=task, projects=projects, default_date=today(), submitted=submitted,
+                           source=_get_own_or_admin(source_id) if source_id else None,
                            users=User.query.order_by(User.name).all() if current_user.is_admin else [])
 
 

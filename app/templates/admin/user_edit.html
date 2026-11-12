@@ -5,20 +5,20 @@
 <h1>{{ user.name if user else _('Novo utilizador') }}</h1>
 <form method="post" class="card form-narrow">
   {{ csrf() }}
-  <label>{{ _('Nome') }} <input name="name" required value="{{ request.form.get('name', user.name if user else '') }}"></label>
-  <label>{{ _('Email') }} <input type="email" name="email" required value="{{ request.form.get('email', user.email if user else '') }}"></label>
+  <label>{{ _('Nome') }} <input name="name" required maxlength="120" autocomplete="off" value="{{ request.form.get('name', user.name if user else '') }}"></label>
+  <label>{{ _('Email') }} <input type="email" name="email" required autocomplete="off" autocapitalize="none" spellcheck="false" value="{{ request.form.get('email', user.email if user else '') }}"></label>
   <label>{{ _('Nova palavra-passe (deixe vazio para manter)') if user else _('Palavra-passe inicial') }}
     <input type="password" name="password" minlength="12" maxlength="1024" {{ '' if user else 'required' }} autocomplete="new-password"></label>
   <div class="grid grid-2">
-    <label>{{ _('Dias de férias por ano') }} <input type="number" name="vacation_days" min="0" max="366" value="{{ request.form.get('vacation_days', user.vacation_days if user else default_vacation_days) }}"></label>
+    <label>{{ _('Dias de férias por ano') }} <input type="number" name="vacation_days" inputmode="numeric" min="0" max="366" value="{{ request.form.get('vacation_days', user.vacation_days if user else default_vacation_days) }}"></label>
     <label>{{ _('Cor no calendário') }} <input type="color" name="color" value="{{ request.form.get('color', user.color if user else '#3b82f6') }}"></label>
   </div>
   <p class="muted">{{ _('O valor anual é configurável; o padrão de 22 dias não confirma a política da empresa.') }}</p>
-  <fieldset><legend>{{ _('Dias habituais de trabalho') }}</legend><input type="hidden" name="schedule_present" value="1">
+  <fieldset class="weekday-chips"><legend>{{ _('Dias habituais de trabalho') }}</legend><input type="hidden" name="schedule_present" value="1">
   {% set days = request.form.getlist('working_weekdays') if request.method == 'POST' else (user.working_weekdays.split(',') if user else ['0','1','2','3','4']) %}
-  {% for label in [_('Segunda'),_('Terça'),_('Quarta'),_('Quinta'),_('Sexta'),_('Sábado'),_('Domingo')] %}<label class="check"><input type="checkbox" name="working_weekdays" value="{{ loop.index0 }}" {{ 'checked' if loop.index0|string in days }}>{{ label }}</label>{% endfor %}</fieldset>
+  <div class="chip-row">{% for label in [_('Segunda'),_('Terça'),_('Quarta'),_('Quinta'),_('Sexta'),_('Sábado'),_('Domingo')] %}<label class="check"><input type="checkbox" name="working_weekdays" value="{{ loop.index0 }}" {{ 'checked' if loop.index0|string in days }}>{{ label }}</label>{% endfor %}</div></fieldset>
   <p class="muted">{{ _('Alterar os dias de trabalho só afeta novos pedidos; os existentes conservam o horário original.') }}</p>
-  <fieldset><legend>{{ _('Direito específico de um ano (opcional)') }}</legend><label>{{ _('Ano') }} <input type="number" name="allowance_year" min="1900" max="9998" value="{{ request.form.get('allowance_year', today.year) }}"></label><label>{{ _('Dias nesse ano') }} <input type="number" name="allowance_days" min="0" max="366" value="{{ request.form.get('allowance_days', '') }}"></label>
+  <fieldset><legend>{{ _('Direito específico de um ano (opcional)') }}</legend><label>{{ _('Ano') }} <input type="number" name="allowance_year" inputmode="numeric" min="1900" max="9998" value="{{ request.form.get('allowance_year', today.year) }}"></label><label>{{ _('Dias nesse ano') }} <input type="number" name="allowance_days" inputmode="numeric" min="0" max="366" value="{{ request.form.get('allowance_days', '') }}"></label>
   {% if allowances %}<ul>{% for a in allowances %}<li>{{ _('{year}: {days} dias', year=a.year, days=a.days) }}</li>{% endfor %}</ul>{% endif %}</fieldset>
   <label class="check"><input type="checkbox" name="is_admin" value="1" {{ 'checked' if (request.form.get('is_admin') if request.method == 'POST' else user and user.is_admin) }}> {{ _('Administrador (aprova férias, gere utilizadores e picagens)') }}</label>
   <label class="check"><input type="checkbox" name="active" value="1" {{ 'checked' if (request.form.get('active') if request.method == 'POST' else not user or user.active) }}> {{ _('Conta ativa') }}</label>

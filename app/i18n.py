@@ -48,17 +48,21 @@ def language_return_url():
     return url_for(index) if index in current_app.view_functions else '/'
 
 
+def local_target(target, default='/'):
+    """Return target only when it is a path on this site; otherwise the default."""
+    decoded = unquote(target or '')
+    if (not decoded.startswith('/') or decoded.startswith('//') or '\\' in decoded
+            or any(ord(c) < 32 for c in decoded) or urlsplit(decoded).netloc):
+        return default
+    return target
+
+
 @bp.post('/language')
 def change_language():
     language = request.form.get('language')
     if language not in ('pt', 'en'):
         abort(400)
-    target = request.form.get('next', '/')
-    decoded = unquote(target)
-    if (not decoded.startswith('/') or decoded.startswith('//') or '\\' in decoded
-            or any(ord(c) < 32 for c in decoded) or urlsplit(decoded).netloc):
-        target = '/'
-    response = redirect(target)
+    response = redirect(local_target(request.form.get('next', '/')))
     response.set_cookie('bs_language', language, max_age=365 * 24 * 60 * 60,
                         secure=current_app.config['SESSION_COOKIE_SECURE'],
                         httponly=True, samesite='Lax')

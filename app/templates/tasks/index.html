@@ -29,24 +29,40 @@
 </form>
 </div>
 
-{{ month_nav('tasks.index', first, prev_month, next_month, **filters) }}
+{{ month_nav('tasks.index', first, prev_month, next_month, current=today, **filters) }}
+
+{% if by_project %}
+<section class="card project-summary">
+  <div class="summary-strip">
+    <p>{{ _('Total:') }} <strong>{{ total|hours }}</strong></p>
+    <p>{{ _('Registos') }} <strong>{{ entries|length }}</strong></p>
+  </div>
+  <h2 class="list-label">{{ _('Horas por projeto') }}</h2>
+  <ul class="plain project-bars">
+    {% for name, hours in by_project %}
+    <li><span class="project-name">{{ name or _('Sem projeto') }}</span><span class="project-bar" aria-hidden="true"><span style="width: {{ (100 * hours / by_project[0][1])|round|int if by_project[0][1] else 0 }}%"></span></span><strong>{{ hours|hours }}</strong></li>
+    {% endfor %}
+  </ul>
+</section>
+{% endif %}
 
 <div class="card">
-  <p>{{ _('Total:') }} <strong>{{ total|hours }}</strong> {{ _('em {count} registos', count=entries|length) }}</p>
   {% if entries %}
-  <table>
+  <table class="record-table task-table">
     <thead><tr><th>{{ _('Data') }}</th>{% if current_user.is_admin %}<th>{{ _('Colaborador') }}</th>{% endif %}<th>{{ _('Projeto') }}</th><th>{{ _('Tarefa') }}</th><th>{{ _('Horas') }}</th><th><span class="visually-hidden">{{ _('Ações') }}</span></th></tr></thead>
+    {% for day, items in days.items() %}
     <tbody>
-    {% for e in entries %}
+    {% for e in items %}
       <tr>
-        <td>{{ e.date|d }}</td>
-        {% if current_user.is_admin %}<td>{{ e.user.name }}</td>{% endif %}
-        <td>{% if e.project %}<span class="tag">{{ e.project }}</span>{% endif %}</td>
-        <td><strong>{{ e.title }}</strong>{% if e.description %}<div class="desc">{{ e.description }}</div>{% endif %}</td>
-        <td>{{ e.hours|hours }}</td>
+        <td class="cell-day">{% if loop.first %}<strong><span class="cell-weekday">{{ day|weekday }}</span> {{ day|d }}</strong>{% endif %}</td>
+        {% if current_user.is_admin %}<td class="cell-user">{{ e.user.name }}</td>{% endif %}
+        <td class="cell-project">{% if e.project %}<span class="tag">{{ e.project }}</span>{% endif %}</td>
+        <td class="cell-task"><strong>{{ e.title }}</strong>{% if e.description %}<div class="desc">{{ e.description }}</div>{% endif %}</td>
+        <td class="cell-duration">{{ e.hours|hours }}</td>
         <td class="row-actions">
           {% if e.user_id == current_user.id or current_user.is_admin %}
           <a href="{{ url_for('tasks.edit', task_id=e.id) }}">{{ _('Editar') }}<span class="visually-hidden"> {{ _('tarefa de {date}', date=e.date|d) }}</span></a>
+          <a href="{{ url_for('tasks.edit', de=e.id) }}">{{ _('Duplicar') }}<span class="visually-hidden"> {{ _('tarefa de {date}', date=e.date|d) }}</span></a>
           <form method="post" action="{{ url_for('tasks.delete', task_id=e.id) }}" class="inline" onsubmit="return confirm({{ _('Apagar esta tarefa?')|tojson|forceescape }})">
             {{ csrf() }}<button class="link danger">{{ _('Apagar') }}<span class="visually-hidden"> {{ _('tarefa de {date}', date=e.date|d) }}</span></button>
           </form>
@@ -54,10 +70,14 @@
         </td>
       </tr>
     {% endfor %}
+    {% if items|length > 1 %}
+      <tr class="subtotal"><td></td><td colspan="{{ 3 if current_user.is_admin else 2 }}">{{ _('Total do dia') }}</td><td class="cell-duration">{{ items|map(attribute='hours')|sum|hours }}</td><td></td></tr>
+    {% endif %}
     </tbody>
+    {% endfor %}
   </table>
   {% else %}
-    <p class="muted">{{ _('Sem tarefas registadas neste mês.') }}</p>
+    <p class="muted empty-state">{{ _('Sem tarefas registadas neste mês.') }}</p>
   {% endif %}
 </div>
 {% endblock %}

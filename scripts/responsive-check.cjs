@@ -36,7 +36,9 @@ async function geometry(page,width,role,label) {
       heading:rect('h1'), toolbar:rect('.report-toolbar'),
       controls:[...document.querySelectorAll('.report-toolbar select, .report-toolbar .btn')].map(element=>{const r=element.getBoundingClientRect();return{bottom:r.bottom,height:r.height,left:r.left,right:r.right};}),
       lastNav:rect('#workspace-nav .nav-item:last-child'),
-      navVisible:getComputedStyle(document.querySelector('#workspace-nav')).display!=='none',
+      nav:rect('#workspace-nav'), navFixed:getComputedStyle(document.querySelector('#workspace-nav')).position==='fixed',
+      navItems:[...document.querySelectorAll('#workspace-nav .nav-item')].filter(element=>element.getClientRects().length).map(element=>{const r=element.getBoundingClientRect();return{left:r.left,right:r.right,clipped:element.scrollWidth>element.clientWidth+1};}),
+      viewportHeight:innerHeight, bottomPadding:parseFloat(getComputedStyle(main).paddingBottom),
     };
   });
   assert(!data.overflow,label+' page overflows');
@@ -53,8 +55,16 @@ async function geometry(page,width,role,label) {
     const bottoms=data.controls.map(control=>control.bottom);
     assert(Math.max(...bottoms)-Math.min(...bottoms)<2,label+' filter and export controls have different baselines');
   }
-  if(data.navVisible && Math.abs(data.lastNav.bottom-data.language.bottom)<20) assert(data.lastNav.right+4<=data.language.left,label+' navigation overlaps toolbar');
-  assert.equal(data.navVisible,width>760,label+' incorrect responsive navigation');
+  assert.equal(data.navFixed,width<=760,label+' incorrect responsive navigation');
+  if(data.navFixed) {
+    // Phone dock: inside the viewport, labels unclipped, and page content can scroll clear of it.
+    assert(data.nav.left>=0 && data.nav.right<=data.availableWidth+1 && data.nav.bottom<=data.viewportHeight,label+' dock leaves the viewport');
+    assert(data.bottomPadding>=data.nav.height,label+' content can hide under the dock');
+    data.navItems.forEach((item,index)=>{
+      assert(!item.clipped,label+' dock label clipped');
+      if(index)assert(item.left+1>=data.navItems[index-1].right,label+' dock items overlap');
+    });
+  } else if(Math.abs(data.lastNav.bottom-data.language.bottom)<20) assert(data.lastNav.right+4<=data.language.left,label+' navigation overlaps toolbar');
 }
 async function stableNavigation(browser,name) {
   const context=await browser.newContext({viewport:{width:1440,height:900}});
@@ -131,17 +141,14 @@ async function run(engine,name) {
               assert(!(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth+2)),label+endpoint+' dark overflow');
               if(role==='admin') await capture(page,label+endpoint.replace(/[^a-z]/g,'-')+'-dark');
             }
-            if(width===390) await page.locator('label[for=nav-toggle]').press('Enter');
             await page.locator('.account-menu summary').click();
             await page.getByRole('link',{name:language==='pt'?'O meu perfil':'My profile',exact:true}).waitFor();
             await page.keyboard.press('Escape');
             assert.equal(await page.locator('.account-menu').getAttribute('open'),null);
             if(width===390) {
-              await page.keyboard.press('Escape');
-              assert.equal(await page.locator('label[for=nav-toggle]').getAttribute('aria-expanded'),'false');
-              assert(!(await page.locator('#workspace-nav').isVisible()));
-              await page.locator('label[for=nav-toggle]').click();
-              assert.equal(await page.locator('#workspace-nav .nav-item').count(),role==='admin'?6:5);
+              assert(await page.locator('#workspace-nav').isVisible());
+              assert.equal(await page.locator('#workspace-nav .nav-item:visible').count(),5);
+              assert.equal(await page.locator('.account-dropdown a[href="/admin/utilizadores"]').count(),role==='admin'?1:0);
               await page.locator('#workspace-nav a[href="/picagens/"]').click();
               await page.waitForURL(base+'/picagens/');
             }

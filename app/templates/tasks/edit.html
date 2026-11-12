@@ -4,7 +4,8 @@
 {% block content %}
 <h1>{{ _('Editar tarefa') if task else _('Registar tarefa') }}</h1>
 {% set values = submitted if submitted is not none else none %}
-{% set selected_user = values.get('user_id', task.user_id if task else '') if values is not none else (task.user_id if task else '') %}
+{% set base = task or source %}
+{% set selected_user = values.get('user_id', base.user_id if base else '') if values is not none else (base.user_id if base else '') %}
 <form method="post" class="card form-narrow">
   {{ csrf() }}
   {% if current_user.is_admin %}
@@ -17,14 +18,14 @@
   {% endif %}
   <div class="grid grid-2">
     <label>{{ _('Data') }} <input type="date" name="date" required value="{{ values.get('date', (task.date if task else default_date).isoformat()) if values is not none else (task.date if task else default_date).isoformat() }}"></label>
-    <label>{{ _('Horas') }} <input type="number" name="hours" min="0" max="24" step="any" value="{{ values.get('hours', task.hours if task else '') if values is not none else (task.hours if task else '') }}" placeholder="{{ _('ex.: 1.5') }}"></label>
+    <label>{{ _('Horas') }} <input type="number" name="hours" inputmode="decimal" min="0" max="24" step="any" value="{{ values.get('hours', base.hours if base else '') if values is not none else (base.hours if base else '') }}" placeholder="{{ _('ex.: 1.5') }}"></label>
   </div>
   <label>{{ _('Projeto / cliente') }}
-    <input name="project" list="projects" maxlength="120" value="{{ values.get('project', task.project if task else '') if values is not none else (task.project if task else '') }}">
+    <input name="project" list="projects" maxlength="120" value="{{ values.get('project', base.project if base else '') if values is not none else (base.project if base else '') }}">
     <datalist id="projects">{% for p in projects %}<option value="{{ p }}">{% endfor %}</datalist>
   </label>
-  <label>{{ _('Tarefa') }} <input name="title" required maxlength="200" value="{{ values.get('title', task.title if task else '') if values is not none else (task.title if task else '') }}" placeholder="{{ _('Resumo do que foi feito') }}"></label>
-  <label>{{ _('Descrição') }} <textarea name="description" rows="5" maxlength="10000" placeholder="{{ _('Detalhes, notas, próximos passos…') }}">{{ values.get('description', task.description if task else '') if values is not none else (task.description if task else '') }}</textarea></label>
+  <label>{{ _('Tarefa') }} <input name="title" required maxlength="200" value="{{ values.get('title', base.title if base else '') if values is not none else (base.title if base else '') }}" placeholder="{{ _('Resumo do que foi feito') }}"></label>
+  <label>{{ _('Descrição') }} <textarea name="description" rows="5" maxlength="10000" placeholder="{{ _('Detalhes, notas, próximos passos…') }}">{{ values.get('description', base.description if base else '') if values is not none else (base.description if base else '') }}</textarea></label>
   <div class="actions">
     <button class="btn btn-primary">{{ _('Guardar') }}</button>
     <a class="btn btn-light" href="{{ url_for('tasks.index') }}">{{ _('Cancelar') }}</a>

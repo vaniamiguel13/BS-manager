@@ -129,3 +129,23 @@ also requires company policy approval, hosting/maintenance ownership, independen
 backup storage/key custody, scheduling/retention/alerts and measured recovery
 objectives. See [TASKS.md](TASKS.md) and
 [RELEASE_READINESS.md](RELEASE_READINESS.md) for current evidence and gaps.
+
+## Interface additions — 2026-11-12
+
+Added without schema changes, migrations or new dependencies:
+
+- Dashboard: running elapsed time for the open session (server-rendered value
+  without JavaScript), hours per weekday for the current week, a quick work-log
+  form for today, and absences split into today and upcoming under the existing
+  privacy rule.
+- Work logs: daily totals, hours per project for the filtered month, and a
+  duplicate action that prefills a new entry dated today. Duplicating follows the
+  same owner-or-administrator rule as editing.
+- The quick form returns to the dashboard through a `next` value accepted only
+  when it is a local path; anything else falls back to the work-log list.
+- A web manifest and icons allow adding the application to a home screen. There
+  is no offline mode.
+
+Tested locally on 2026-11-12: 192 tests pass on SQLite with 7 PostgreSQL-only
+tests skipped, and both browser checks pass in Chromium and WebKit. PostgreSQL
+acceptance, hosted CI, the demo and physical phones were not exercised.

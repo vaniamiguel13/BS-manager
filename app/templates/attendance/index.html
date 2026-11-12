@@ -22,22 +22,27 @@
   </div>
 </div>
 
-{{ month_nav('attendance.index', first, prev_month, next_month, user=user.id) }}
+{{ month_nav('attendance.index', first, prev_month, next_month, current=today, user=user.id) }}
 
 <div class="card">
-  <p>{{ _('Total do mês:') }} <strong>{{ total|hours }}</strong> {{ _('em {count} dias', count=days|length) }}</p>
+  <div class="summary-strip">
+    <p>{{ _('Total do mês:') }} <strong>{{ total|hours }}</strong></p>
+    <p>{{ _('Dias trabalhados') }} <strong>{{ days|length }}</strong></p>
+    <p>{{ _('Média por dia') }} <strong>{{ (total / days|length)|hours if days else '–' }}</strong></p>
+  </div>
   {% if days %}
-  <table>
+  <table class="record-table attendance-table">
     <thead><tr><th>{{ _('Dia') }}</th><th>{{ _('Entrada') }}</th><th>{{ _('Saída') }}</th><th>{{ _('Duração') }}</th><th>{{ _('Nota') }}</th>{% if current_user.is_admin %}<th><span class="visually-hidden">{{ _('Ações') }}</span></th>{% endif %}</tr></thead>
-    <tbody>
     {% for day, sessions in days.items() %}
+    <tbody>
       {% for s in sessions %}
+      {% set start = s.start|attendance_local %}{% set end = s.end|attendance_local %}
       <tr>
-        <td>{% if loop.first %}<strong>{{ day|d }}</strong>{% endif %}</td>
-        <td>{{ (s.start|attendance_local).strftime('%H:%M:%S %z') }}</td>
-        <td>{% if not s.is_open %}{{ (s.end|attendance_local).strftime('%H:%M:%S %z') }}{% if (s.end|attendance_local).date() != (s.start|attendance_local).date() %} <span class="muted">({{ (s.end|attendance_local)|d }})</span>{% endif %}{% else %}<span class="badge badge-pendente">{{ _('Em curso') }}</span>{% endif %}</td>
-        <td>{{ s.duration|hours }}</td>
-        <td>{{ s.session.note }}{% if s.session.edited_by %} <span class="muted" title="{{ _('Editado por {name}', name=s.session.edited_by.name) }}">✎</span>{% endif %}</td>
+        <td class="cell-day">{% if loop.first %}<strong><span class="cell-weekday">{{ day|weekday }}</span> {{ day|d }}</strong>{% endif %}</td>
+        <td class="cell-time"><time datetime="{{ start.isoformat() }}" title="{{ start.strftime('%H:%M:%S %z') }}">{{ start|t }}</time></td>
+        <td class="cell-time cell-out">{% if not s.is_open %}<time datetime="{{ end.isoformat() }}" title="{{ end.strftime('%H:%M:%S %z') }}">{{ end|t }}</time>{% if end.date() != start.date() %} <span class="muted">({{ end|d }})</span>{% endif %}{% else %}<span class="badge badge-pendente">{{ _('Em curso') }}</span>{% endif %}</td>
+        <td class="cell-duration">{{ s.duration|hours }}</td>
+        <td class="cell-note">{{ s.session.note }}{% if s.session.edited_by %} <span class="muted" title="{{ _('Editado por {name}', name=s.session.edited_by.name) }}">✎</span>{% endif %}</td>
         {% if current_user.is_admin %}
         <td class="row-actions">
           <a href="{{ url_for('attendance.edit', session_id=s.session.id) }}">{{ _('Editar') }}<span class="visually-hidden"> {{ _('picagem de {date}', date=day|d) }}</span></a>
@@ -48,13 +53,13 @@
       </tr>
       {% endfor %}
       {% if sessions|length > 1 %}
-      <tr class="subtotal"><td></td><td colspan="2">{{ _('Total do dia') }}</td><td>{{ sessions|map(attribute='hours')|sum|hours }}</td><td colspan="2"></td></tr>
+      <tr class="subtotal"><td></td><td colspan="2">{{ _('Total do dia') }}</td><td class="cell-duration">{{ sessions|map(attribute='hours')|sum|hours }}</td><td colspan="{{ 2 if current_user.is_admin else 1 }}"></td></tr>
       {% endif %}
-    {% endfor %}
     </tbody>
+    {% endfor %}
   </table>
   {% else %}
-    <p class="muted">{{ _('Sem picagens neste mês.') }}</p>
+    <p class="muted empty-state">{{ _('Sem picagens neste mês.') }}</p>
   {% endif %}
 </div>
 {% if voided %}<section class="card"><h2>{{ _('Picagens anuladas') }}</h2><ul>{% for row in voided %}<li>{{ row.start|attendance_local|dt }} · <a href="{{ url_for('attendance.history', session_id=row.id) }}">{{ _('Histórico de anulação') }}</a></li>{% endfor %}</ul></section>{% endif %}
